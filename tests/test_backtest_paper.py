@@ -59,6 +59,12 @@ def test_drawdown_marks_open_position_to_market():
             if len(candles) == 1:
                 return type("Signal", (), {"side": "buy"})()
             return None
-    result = run_backtest(candles(), OneBuy())
+    t = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    falling = [
+        Candle(t, Decimal("10"), Decimal("10"), Decimal("10"), Decimal("10")),
+        Candle(t+timedelta(minutes=1), Decimal("10"), Decimal("11"), Decimal("10"), Decimal("11")),
+        Candle(t+timedelta(minutes=2), Decimal("9"), Decimal("9"), Decimal("8"), Decimal("8")),
+    ]
+    result = run_backtest(falling, OneBuy())
     assert result.max_drawdown_fraction > 0
-    assert result.net_pnl == Decimal("-1")
+    assert result.net_pnl == Decimal("-2")
