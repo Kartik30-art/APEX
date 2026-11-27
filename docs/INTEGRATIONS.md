@@ -1,0 +1,55 @@
+# APEX integrations and assumptions
+
+## Capability status
+
+| Capability | Code delivered | External activation |
+|---|---|---|
+| Global FX data | Twelve Data REST adapter | API key and vendor entitlement/licence |
+| India exchange data | Licensed JSON vendor adapter | User-selected licensed vendor endpoint and token |
+| OpenAI, Gemini, Anthropic | Advisory-only REST clients | Each provider API key; usage may be billed |
+| INR futures valuation | Contract multiplier, quote convention and tick value | Verify current contract master and expiry |
+| Costs | Configurable fee schedule | Current broker/exchange/tax inputs; defaults zero |
+| SQLite | WAL, candles, paper orders, audit and research tables | Persistent mount or managed DB |
+| Backup | Online backup, integrity check, SHA-256 | Copy to separate durable destination |
+| Broker | Paper broker + adapter protocol | Broker account/API setup |
+| Live orders | Hard disabled | Not implemented; cannot be enabled by env flag |
+
+## Global Forex data
+
+TwelveDataForexProvider reads TWELVEDATA_API_KEY and supports REST quote and OHLC time-series calls. Confirm the vendor plan permits automated use, retention and display. It is not called automatically at startup. Docs: https://twelvedata.com/docs
+
+## India exchange data
+
+LicensedIndiaJSONProvider reads APEX_INDIA_DATA_URL and optional APEX_INDIA_DATA_TOKEN. The endpoint must return a JSON list or an object with values array, containing timestamp/open/high/low/close and optional volume. No exchange-page scraping or licence circumvention.
+
+## AI research
+
+Set OPENAI_API_KEY, GEMINI_API_KEY and/or ANTHROPIC_API_KEY. Optional model overrides: OPENAI_MODEL, GEMINI_MODEL, ANTHROPIC_MODEL. AIResearch.compare() invokes configured providers independently. API requests can incur charges; ChatGPT subscriptions do not automatically include API credits. AI output is advisory and never routed to a broker.
+
+Official docs: https://developers.openai.com/api/reference ; https://ai.google.dev/api ; https://docs.anthropic.com/en/api
+
+## NSE INR futures reference metadata
+
+The initial reference table encodes USDINR, EURINR and GBPINR as 1,000 base-currency units per contract; JPYINR as 100,000 JPY quoted per 100 JPY; tick size INR 0.0025; derived tick value INR 2.50 per contract for these four pairs. Source: NSE India, Contract Specifications - Futures & Options on INR pairs: https://www.nseindia.com/static/products-services/currency-derivatives-contract-specification-inr
+
+This is a reference snapshot, not a live contract master. Verify current symbol, expiry, lot and tick against the current exchange contract master. Options valuation is not implemented.
+
+## Costs
+
+FeeSchedule accepts explicit brokerage, exchange, SEBI, stamp, transaction-tax and GST inputs. Defaults are zero for software tests, not actual charge estimates. The generic model is simplified; actual tax bases differ. Obtain current broker tariff/contract note and encode its exact bases before relying on net P&L.
+
+## Durable storage and backup
+
+APEXStore defaults to data/apex.sqlite3; set APEX_DATA_DIR to a persistent mount. backup(path) uses SQLite online backup and checks PRAGMA integrity_check, returning SHA-256. Copy the result to separate durable storage. Render free service storage is ephemeral, so this code alone does not make cloud data durable.
+
+## Broker and Indian regulatory gate
+
+PaperBroker writes a unique client order ID to SQLite. LiveBrokerGateway always raises LiveExecutionLocked; no environment variable unlock exists.
+
+RBI FAQ states residents may undertake forex only with authorised persons and for permitted purposes; electronic transactions must use RBI-authorised ETPs or recognised exchanges under applicable conditions. RBI's exchange-traded derivative direction lists permitted pairs and conditions for INR-involving derivatives. Verify current RBI master direction, exchange circulars, broker eligibility and personal circumstances before any real-world use.
+
+Official references: https://rbi.org.in/Scripts/FAQView.aspx?Id=146 ; https://rbi.org.in/scripts/FS_Notification.aspx?Id=12594&Mode=0&fn=6 ; https://www.nseindia.com/static/products-services/currency-derivatives-contract-specification-inr
+
+## Deployment limitations
+
+Render free filesystem is ephemeral, instances sleep when idle, and no always-on or durable-storage promise is made. A persistent disk or managed DB requires a paid plan; APEX does not provision one under the zero-rupee budget. Never store API keys in GitHub, source files or chat.
