@@ -33,6 +33,9 @@ class ContractBacktestResult:
     gross_pnl_quote: Decimal
     estimated_fees_quote: Decimal
     net_pnl_quote: Decimal
+    initial_equity: Decimal
+    final_equity: Decimal
+    return_fraction: Decimal
     win_rate: Decimal
     max_drawdown_fraction: Decimal
     assumptions: dict
@@ -46,15 +49,18 @@ def run_contract_backtest(
     contracts: int = 1,
     fees: FeeSchedule = FeeSchedule(),
     slippage_ticks_per_side: Decimal = Decimal("0"),
+    initial_equity: Decimal = Decimal("100000"),
 ) -> ContractBacktestResult:
     if contracts < 1:
         raise ValueError("contracts must be a positive integer")
     if not slippage_ticks_per_side.is_finite() or slippage_ticks_per_side < 0:
         raise ValueError("slippage_ticks_per_side must be finite and non-negative")
+    if not initial_equity.is_finite() or initial_equity <= 0:
+        raise ValueError("initial_equity must be finite and positive")
     raw = run_backtest(candles, strategy, BacktestConfig())
     trades = []
-    running = Decimal("0")
-    peak = Decimal("0")
+    running = initial_equity
+    peak = initial_equity
     drawdown = Decimal("0")
     gross_total = Decimal("0")
     fees_total = Decimal("0")
@@ -87,6 +93,8 @@ def run_contract_backtest(
         symbol=spec.symbol, contracts=contracts, trades=tuple(trades),
         gross_pnl_quote=gross_total, estimated_fees_quote=fees_total,
         net_pnl_quote=gross_total-fees_total,
+        initial_equity=initial_equity, final_equity=initial_equity+gross_total-fees_total,
+        return_fraction=(gross_total-fees_total)/initial_equity,
         win_rate=Decimal(wins)/Decimal(len(trades)) if trades else Decimal("0"),
         max_drawdown_fraction=drawdown,
         assumptions={
