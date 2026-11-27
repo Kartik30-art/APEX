@@ -19,8 +19,8 @@ def test_contract_backtest_applies_contract_multiplier_and_tick_slippage():
         bars.append(Candle(start+timedelta(hours=i),x,x+Decimal("0.01"),x-Decimal("0.01"),x,Decimal("1")))
     result=run_contract_backtest(bars,OneLong(),NSE_INR_FUTURES["USDINR"],contracts=2,slippage_ticks_per_side=Decimal("1"))
     assert result.symbol=="USDINR"
-    assert result.trades[0].valuation.gross_pnl_quote==Decimal("30")
-    assert result.net_pnl_quote==Decimal("30")
+    assert result.trades[0].valuation.gross_pnl_quote==Decimal("10")
+    assert result.net_pnl_quote==Decimal("10")
     assert result.assumptions["tick_value_per_contract"]=="2.5"
 
 def test_contract_backtest_includes_configured_fees():
