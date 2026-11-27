@@ -4,6 +4,8 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import json
 import os
+import base64
+import hmac
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -108,7 +110,35 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _authorized(self):
+        configured = os.environ.get("APEX_ACCESS_PASSWORD", "")
+        if not configured:
+            self._send(503, "text/plain; charset=utf-8",
+                       b"APEX is locked: set APEX_ACCESS_PASSWORD in the Render environment first.")
+            return False
+        header = self.headers.get("Authorization", "")
+        try:
+            scheme, encoded = header.split(" ", 1)
+            if scheme.lower() != "basic":
+                raise ValueError("unsupported auth scheme")
+            decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
+            username, password = decoded.split(":", 1)
+        except Exception:
+            username, password = "", ""
+        valid_user = hmac.compare_digest(username.encode(), b"apex")
+        valid_password = hmac.compare_digest(password.encode(), configured.encode())
+        if not (valid_user and valid_password):
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="APEX Personal Workbench", charset="UTF-8"')
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return False
+        return True
+
     def do_GET(self):
+        if not self._authorized():
+            return
         path = urlsplit(self.path).path
         if path == "/healthz":
             body = json.dumps({"status":"ok","mode":"research","live_trading_enabled":False}).encode()
@@ -117,6 +147,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "text/html; charset=utf-8", PAGE.encode())
 
     def do_POST(self):
+        if not self._authorized():
+            return
         if urlsplit(self.path).path != "/api/backtest":
             self._send(404, "application/json", b'{"error":"not_found"}')
             return
