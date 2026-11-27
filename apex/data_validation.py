@@ -28,7 +28,7 @@ def validate_candles(candles: Sequence[Candle], *, max_age: timedelta | None = N
         seen.add(c.timestamp)
         if previous is not None and c.timestamp <= previous: errors.append(f"row {i}: timestamps must be strictly increasing")
         previous = c.timestamp
-        if min(c.open, c.high, c.low, c.close) <= 0: errors.append(f"row {i}: OHLC prices must be positive")
+        if not all(value.is_finite() for value in (c.open, c.high, c.low, c.close, c.volume)):\n            errors.append(f"row {i}: OHLCV values must be finite")\n            continue\n        if min(c.open, c.high, c.low, c.close) <= 0: errors.append(f"row {i}: OHLC prices must be positive")
         if c.high < max(c.open, c.close, c.low): errors.append(f"row {i}: inconsistent high")
         if c.low > min(c.open, c.close, c.high): errors.append(f"row {i}: inconsistent low")
         if c.volume < 0: errors.append(f"row {i}: volume cannot be negative")
