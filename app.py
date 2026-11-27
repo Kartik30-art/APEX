@@ -30,7 +30,7 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </style></head><body><main>
 <div class="top"><div class="brand">APEX<span style="color:var(--accent)">.</span></div><div class="pill">PERSONAL WORKBENCH · NO LIVE TRADING</div></div>
 <h1>Research first.<br><span>Evidence over hype.</span></h1>
-<p class="lead">A private-use research workbench foundation for global Forex and Indian exchange-traded currency derivatives. Run a basic historical OHLC backtest using your own CSV data. No broker connection, live orders, or market feed.</p>
+<p class="lead">A private-use research workbench foundation for global Forex and Indian exchange-traded currency derivatives. Run a basic historical OHLC backtest using your own CSV data. No broker connection or live orders. Connect a licensed market-data provider to activate data.</p>
 <div class="grid">
 <section class="card"><h2>GLOBAL FOREX</h2><div class="state">Research only</div><div class="muted">Separate market profile · execution off</div></section>
 <section class="card"><h2>INDIA CURRENCY DERIVATIVES</h2><div class="state">Research only</div><div class="muted">Separate market profile · execution off</div></section>
@@ -69,7 +69,7 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
-<div id="providers" class="muted">Checking configured providers…</div><button id="runBackup">Create and upload encrypted-storage backup</button><div id="backupResult" class="muted" style="margin-top:8px"></div>
+<div id="providers" class="muted">Checking configured providers…</div><button id="runBackup">Create and upload off-site database backup</button><div id="backupResult" class="muted" style="margin-top:8px"></div>
 <div class="fields">
 <label>FX symbol<input id="fxSymbol" type="text" value="EUR/USD"></label>
 <label>FX interval<input id="fxInterval" type="text" value="1h"></label>
