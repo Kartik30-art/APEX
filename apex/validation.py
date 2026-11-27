@@ -40,7 +40,7 @@ class _TestOnlyStrategy:
         self.version = wrapped.version
 
     def generate_signal(self, candles: Sequence[Candle]) -> StrategySignal | None:
-        if len(candles) <= self.first_test_signal_index:
+        if len(candles) < self.first_test_signal_index:
             return None
         return self.wrapped.generate_signal(candles)
 
