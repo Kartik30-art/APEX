@@ -39,3 +39,47 @@ def test_adapters_fail_closed_without_credentials(monkeypatch):
  with pytest.raises(ProviderNotConfigured): TwelveDataForexProvider()
  with pytest.raises(ProviderNotConfigured): LicensedIndiaJSONProvider()
  with pytest.raises(AIProviderNotConfigured): AIResearch().ask('openai','review')
+
+
+def test_openai_uses_responses_api_and_extracts_text(monkeypatch):
+    import apex.ai_research as module
+    monkeypatch.setenv("OPENAI_API_KEY","test-key")
+    calls=[]
+    def fake_post(url,headers,payload):
+        calls.append((url,headers,payload))
+        return {"output":[{"type":"message","content":[{"type":"output_text","text":"critical review"}]}]}
+    monkeypatch.setattr(module,"_post",fake_post)
+    assert AIResearch().ask("openai","review this dataset")=="critical review"
+    url,headers,payload=calls[0]
+    assert url.endswith("/v1/responses")
+    assert headers["Authorization"]=="Bearer test-key"
+    assert payload["model"]=="gpt-6.2-astra"
+
+def test_gemini_api_key_is_sent_in_header(monkeypatch):
+    import apex.ai_research as module
+    monkeypatch.setenv("GEMINI_API_KEY","test-key")
+    calls=[]
+    def fake_post(url,headers,payload):
+        calls.append((url,headers,payload))
+        return {"candidates":[{"content":{"parts":[{"text":"Gemini review"}]}}]}
+    monkeypatch.setattr(module,"_post",fake_post)
+    assert AIResearch().ask("gemini","review")=="Gemini review"
+    url,headers,payload=calls[0]
+    assert "key=" not in url
+    assert headers["x-goog-api-key"]=="test-key"
+
+def test_claude_uses_current_default_model(monkeypatch):
+    import apex.ai_research as module
+    monkeypatch.setenv("ANTHROPIC_API_KEY","test-key")
+    calls=[]
+    def fake_post(url,headers,payload):
+        calls.append(payload)
+        return {"content":[{"type":"text","text":"Claude review"}]}
+    monkeypatch.setattr(module,"_post",fake_post)
+    assert AIResearch().ask("anthropic","review")=="Claude review"
+    assert calls[0]["model"]=="claude-sonnet-5-5"
+
+def test_ai_prompt_validation(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY","test-key")
+    with pytest.raises(ValueError):
+        AIResearch().ask("openai"," ")
