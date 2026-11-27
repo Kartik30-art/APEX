@@ -50,6 +50,14 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
 <div id="providers" class="muted">Checking configured providers…</div>
+<div class="fields">
+<label>FX symbol<input id="fxSymbol" type="text" value="EUR/USD"></label>
+<label>FX interval<input id="fxInterval" type="text" value="1h"></label>
+<label>India futures symbol<input id="indiaSymbol" type="text" value="USDINR"></label>
+</div>
+<button id="pullFX">Fetch licensed FX history</button>
+<button id="pullIndia">Fetch licensed India history</button>
+<div id="dataResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 <label>Research question<textarea id="researchPrompt" rows="4" style="display:block;width:100%;margin:6px 0 12px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px" placeholder="Ask for a critical review of a strategy, dataset or backtest…"></textarea></label>
 <button id="askAI">Ask configured AI models</button><div id="aiResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 </section>
@@ -65,6 +73,9 @@ function parseCSV(text){
 }
 async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
 loadProviders();
+async function pullData(path,payload){const out=document.getElementById('dataResult');out.textContent='Fetching provider data…';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Provider request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
+document.getElementById('pullFX').addEventListener('click',()=>pullData('/api/data/forex',{symbol:document.getElementById('fxSymbol').value,interval:document.getElementById('fxInterval').value}));
+document.getElementById('pullIndia').addEventListener('click',()=>pullData('/api/data/india',{symbol:document.getElementById('indiaSymbol').value}));
 document.getElementById('askAI').addEventListener('click',async()=>{const p=document.getElementById('researchPrompt').value.trim();const out=document.getElementById('aiResult');if(!p){out.textContent='Enter a research question.';return;}out.textContent='Contacting configured AI providers…';try{const r=await fetch('/api/ai/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});const d=await r.json();if(!r.ok)throw Error(d.error||'AI request failed');out.textContent=JSON.stringify(d.results,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 run.addEventListener('click',async()=>{
  try{
