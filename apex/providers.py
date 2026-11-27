@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from .data_validation import Candle, validate_candles
 from .models import Quote
 
@@ -45,8 +46,17 @@ class TwelveDataForexProvider:
         values = data.get("values")
         if not isinstance(values,list): raise ProviderError("Provider response did not contain candle values")
         result=[]
+        meta=data.get("meta",{})
+        source_timezone=meta.get("exchange_timezone") or meta.get("timezone")
         for row in values:
-            stamp=datetime.fromisoformat(row["datetime"].replace(" ","T")).replace(tzinfo=timezone.utc)
+            stamp=datetime.fromisoformat(row["datetime"].replace(" ","T"))
+            if stamp.tzinfo is None:
+                if not source_timezone:
+                    raise ProviderError("Provider timestamp has no timezone metadata; refusing to assume UTC")
+                try:
+                    stamp=stamp.replace(tzinfo=ZoneInfo(source_timezone))
+                except ZoneInfoNotFoundError as exc:
+                    raise ProviderError("Provider returned an unknown timezone") from exc
             result.append(Candle(stamp,Decimal(row["open"]),Decimal(row["high"]),Decimal(row["low"]),Decimal(row["close"]),Decimal(row.get("volume","0") or "0")))
         report=validate_candles(result)
         if not report.valid: raise ProviderError("Provider candles failed validation: "+"; ".join(report.errors))
