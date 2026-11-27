@@ -57,7 +57,8 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 <label>Exit price<input id="exitPrice" type="number" min="0.00001" step="any" value="83.01"></label>
 <label>Brokerage/order (INR)<input id="brokerage" type="number" min="0" step="any" value="0"></label>
 </div>
-<button id="calcContract">Calculate contract P&amp;L</button><div id="contractResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
+<button id="calcContract">Calculate contract P&amp;L</button>
+<button id="runContractBacktest">Backtest uploaded CSV with contract specs</button><div id="contractResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 </section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
@@ -85,6 +86,7 @@ function parseCSV(text){
 }
 async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
 loadProviders();
+document.getElementById('runContractBacktest').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{if(!fileInput.files.length)throw Error('Choose the historical CSV first');const candles=parseCSV(await fileInput.files[0].text());const payload={candles,symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),fast_window:Number(document.getElementById('fast').value),slow_window:Number(document.getElementById('slow').value),brokerage_per_order:Number(document.getElementById('brokerage').value)};const r=await fetch('/api/contract-backtest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Contract backtest failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 document.getElementById('calcContract').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{const payload={symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),side:document.getElementById('contractSide').value,entry_price:Number(document.getElementById('entryPrice').value),exit_price:Number(document.getElementById('exitPrice').value),brokerage_per_order:Number(document.getElementById('brokerage').value)};const r=await fetch('/api/valuation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Calculation failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 async function pullData(path,payload){const out=document.getElementById('dataResult');out.textContent='Fetching provider data…';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Provider request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
 document.getElementById('pullFX').addEventListener('click',()=>pullData('/api/data/forex',{symbol:document.getElementById('fxSymbol').value,interval:document.getElementById('fxInterval').value}));
@@ -197,6 +199,20 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if path == "/api/backtest":
                 result = _backtest(payload)
+            elif path == "/api/contract-backtest":
+                from apex.contract_backtest import run_contract_backtest
+                from apex.instruments import NSE_INR_FUTURES, FeeSchedule
+                from apex.data_validation import Candle
+                from apex.strategies import MovingAverageCross
+                rows=payload.get("candles",[])
+                if len(rows)>100000: raise ValueError("Maximum upload is 100000 candles")
+                candles=[Candle(datetime.fromisoformat(str(x["timestamp"]).replace("Z","+00:00")),Decimal(str(x["open"])),Decimal(str(x["high"])),Decimal(str(x["low"])),Decimal(str(x["close"])),Decimal(str(x.get("volume","0")))) for x in rows]
+                symbol=str(payload.get("symbol","")).upper()
+                if symbol not in NSE_INR_FUTURES: raise ValueError("Unsupported reference contract")
+                strategy=MovingAverageCross(fast_window=int(payload.get("fast_window",5)),slow_window=int(payload.get("slow_window",20)))
+                fees=FeeSchedule(brokerage_per_order=Decimal(str(payload.get("brokerage_per_order",0))))
+                r=run_contract_backtest(candles,strategy,NSE_INR_FUTURES[symbol],contracts=int(payload.get("contracts",1)),fees=fees)
+                result={"symbol":r.symbol,"contracts":r.contracts,"trade_count":len(r.trades),"gross_pnl_quote":str(r.gross_pnl_quote),"estimated_fees_quote":str(r.estimated_fees_quote),"net_pnl_quote":str(r.net_pnl_quote),"win_rate":str(r.win_rate),"max_drawdown_fraction":str(r.max_drawdown_fraction),"assumptions":r.assumptions,"trades":[{"side":t.side,"entry_time":t.entry_time,"exit_time":t.exit_time,"entry_price":str(t.entry_price),"exit_price":str(t.exit_price),"gross_pnl":str(t.valuation.gross_pnl_quote),"fees":str(t.valuation.estimated_fees_quote),"net_pnl":str(t.valuation.net_pnl_quote)} for t in r.trades]}
             elif path == "/api/valuation":
                 from apex.instruments import NSE_INR_FUTURES, FeeSchedule, calculate_futures_valuation
                 symbol=str(payload.get("symbol","")).upper()
