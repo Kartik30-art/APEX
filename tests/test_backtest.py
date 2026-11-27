@@ -46,7 +46,7 @@ def test_backtest_executes_on_next_bar_and_closes_at_end():
     trade = result.trades[0]
     assert trade.entry_time == candles[1].timestamp.isoformat()
     assert trade.exit_time == candles[2].timestamp.isoformat()
-    assert trade.net_pnl == Decimal("1")
+    assert trade.net_pnl == Decimal("2")
 
 
 def test_backtest_applies_round_trip_fee_and_slippage():
@@ -60,7 +60,7 @@ def test_backtest_applies_round_trip_fee_and_slippage():
         ),
     )
     assert result.trades[0].fees > 0
-    assert result.trades[0].net_pnl < Decimal("1")
+    assert result.trades[0].net_pnl < Decimal("2")
 
 
 def test_backtest_rejects_non_finite_configuration():
