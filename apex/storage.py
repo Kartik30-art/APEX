@@ -45,7 +45,18 @@ class APEXStore:
             db.execute("INSERT INTO audit_events(created_at,event_type,payload_json) VALUES(?,?,?)",(datetime.now(timezone.utc).isoformat(),event_type,payload_json))
     def backup(self,destination: str) -> dict:
         target=Path(destination); target.parent.mkdir(parents=True,exist_ok=True)
-        with self.connect() as source,sqlite3.connect(target) as dest:
+        source=self.connect()
+        dest=sqlite3.connect(target)
+        try:
             source.backup(dest)
-            if dest.execute("PRAGMA integrity_check").fetchone()[0]!="ok": raise RuntimeError("SQLite backup integrity check failed")
-        return {"path":str(target),"sha256":hashlib.sha256(target.read_bytes()).hexdigest(),"bytes":target.stat().st_size,"integrity":"ok","created_at":datetime.now(timezone.utc).isoformat()}
+            if dest.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                raise RuntimeError("SQLite backup integrity check failed")
+            dest.commit()
+        finally:
+            source.close()
+            dest.close()
+        digest=hashlib.sha256()
+        with target.open("rb") as stream:
+            for chunk in iter(lambda:stream.read(1024*1024),b""):
+                digest.update(chunk)
+        return {"path":str(target),"sha256":digest.hexdigest(),"bytes":target.stat().st_size,"integrity":"ok","created_at":datetime.now(timezone.utc).isoformat()}
