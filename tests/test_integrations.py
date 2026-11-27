@@ -83,3 +83,22 @@ def test_ai_prompt_validation(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY","test-key")
     with pytest.raises(ValueError):
         AIResearch().ask("openai"," ")
+
+
+def test_paid_ai_providers_are_disabled_by_default(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.delenv("APEX_ALLOW_PAID_AI", raising=False)
+    ai = AIResearch()
+    assert ai.configured() == []
+    with pytest.raises(AIProviderNotConfigured, match="Paid AI calls are disabled"):
+        ai.ask("openai", "review")
+    with pytest.raises(AIProviderNotConfigured, match="Paid AI calls are disabled"):
+        ai.ask("anthropic", "review")
+
+
+def test_paid_ai_opt_in_is_explicit(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai")
+    monkeypatch.setenv("APEX_ALLOW_PAID_AI", "true")
+    ai = AIResearch()
+    assert "openai" in ai.configured()
