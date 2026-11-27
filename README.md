@@ -7,7 +7,8 @@ APEX is a personal-use, research-first workbench for studying global Forex and I
 - Separate global Forex and India currency-derivative profiles; execution disabled in both.
 - Typed instruments, quotes, trade intents, and OHLCV candle validation.
 - Deterministic moving-average crossover example.
-- Event-driven historical OHLC backtester with next-bar-open fills, configurable per-side fee/slippage assumptions, opposite-signal exits, final-bar liquidation, and basic performance statistics.
+- Event-driven OHLC backtester with next-bar-open fills and a separate contract-aware INR currency-futures backtester using contract units, JPY quotation convention, tick values, explicit fee inputs and tick slippage.
+- Expanding-window walk-forward validation module.
 - SQLite paper-trade journal requiring both paper mode and explicit user confirmation; unique client IDs prevent duplicate journal entries.
 - Append-only JSONL audit logger.
 - Research-only web dashboard with CSV upload for historical backtests.
@@ -36,8 +37,10 @@ python app.py
 - Backtest output is denominated in the instrument quote currency. It does not model exchange contract multipliers, tick-value conversions, margin, financing, swaps, rollover, taxes, broker/exchange fee schedules, market impact, partial fills, liquidity, or market-specific sessions/calendars.
 - The default MA strategy is a coding example, not a validated trading edge. There is no parameter search, walk-forward/holdout framework, robustness analysis, or protection against multiple-testing/data-snooping bias yet.
 - Historical OHLC bars cannot reproduce intrabar order sequencing. Stop-loss execution, gaps, spread dynamics and realistic fills are not modeled by the current backtester.
-- The SQLite paper ledger is a local module and is not exposed through the dashboard. Render's free filesystem is ephemeral; data stored there can disappear on restart/redeploy/spin-down. Do not treat cloud storage as durable.
-- No licensed market-data provider, live feed, broker, credentials, order router, or live execution is connected. No profitability is promised.
+- SQLite storage now includes market candles, paper orders, research/audit tables and integrity-checked backups. Render's free filesystem is ephemeral; set APEX_DATA_DIR to a paid persistent disk or managed database mount for durability. No persistent cloud disk or external off-site backup is provisioned.
+- Provider adapters exist for Twelve Data FX history and a user-selected licensed India data endpoint. They remain disconnected until credentials and vendor entitlements are configured; no verified two-sided streaming bid/ask feed is connected.
+- Advisory-only OpenAI, Gemini and Anthropic API clients exist. They remain disconnected until separate API keys are configured and can incur separate charges.
+- No broker account or production broker adapter is connected. Live execution is hard-disabled. No profitability is promised.
 - AI model connections are not configured. Any future AI research output must remain advisory and cannot override deterministic risk checks.
 - Render free services may sleep when idle and cannot guarantee 24/7 uptime.
 
@@ -47,4 +50,4 @@ This release is research/backtesting only. Global Forex and Indian exchange-trad
 
 Never put passwords, OTPs, broker PINs, or API secrets in this repository or in chat.
 
-See [architecture](docs/ARCHITECTURE.md), [backtesting assumptions](docs/BACKTESTING.md), and [roadmap](docs/ROADMAP.md).
+See [architecture](docs/ARCHITECTURE.md), [integration setup and assumptions](docs/INTEGRATIONS.md), and [roadmap](docs/ROADMAP.md).
