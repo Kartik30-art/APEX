@@ -51,3 +51,14 @@ def test_paper_ledger_requires_explicit_confirmation(tmp_path):
     assert ledger.list_trades()[0]["id"] == trade_id
     ledger.close_trade(trade_id, exit_price=Decimal("1.11"), user_confirmed=True)
     assert ledger.summary()["realized_gross_pnl"] == "0.01"
+
+def test_drawdown_marks_open_position_to_market():
+    class OneBuy:
+        strategy_id = "one_buy"
+        def generate_signal(self, candles):
+            if len(candles) == 1:
+                return type("Signal", (), {"side": "buy"})()
+            return None
+    result = run_backtest(candles(), OneBuy())
+    assert result.max_drawdown_fraction > 0
+    assert result.net_pnl == Decimal("-1")
