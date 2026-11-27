@@ -50,7 +50,7 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 <script>
 const fileInput=document.getElementById('file'),out=document.getElementById('result'),run=document.getElementById('run');
 function parseCSV(text){
- const lines=text.trim().split(/\\r?\\n/); if(lines.length<3)throw Error('CSV needs a header and at least two candles');
+ const lines=text.trim().split(/\r?\n/); if(lines.length<3)throw Error('CSV needs a header and at least two candles');
  const headers=lines[0].split(',').map(x=>x.trim().toLowerCase());
  for(const k of ['timestamp','open','high','low','close'])if(!headers.includes(k))throw Error('Missing column: '+k);
  return lines.slice(1).filter(Boolean).map((line,i)=>{const cols=line.split(',');const row={};headers.forEach((h,j)=>row[h]=cols[j]?.trim());return {timestamp:row.timestamp,open:row.open,high:row.high,low:row.low,close:row.close,volume:row.volume||'0'};});
