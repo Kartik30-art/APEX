@@ -66,7 +66,7 @@ def walk_forward(
     train_end = initial_train_bars
     while train_end < len(candles) and len(folds) < max_folds:
         test_end = min(train_end + test_bars, len(candles))
-        if test_end - train_end < 2:
+        if test_end <= train_end:
             break
         strategy = strategy_factory()
         gated = _TestOnlyStrategy(strategy, train_end)
