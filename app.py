@@ -203,7 +203,8 @@ class Handler(BaseHTTPRequestHandler):
             from apex.ai_research import AIResearch
             body = json.dumps({"ai":{"configured":AIResearch().configured()},
                 "forex_configured":bool(os.getenv("TWELVEDATA_API_KEY")),
-                "india_configured":bool(os.getenv("APEX_INDIA_DATA_URL")),\n                "backup_configured":bool(os.getenv("APEX_S3_BUCKET") and os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")),
+                "india_configured":bool(os.getenv("APEX_INDIA_DATA_URL")),
+                "backup_configured":bool(os.getenv("APEX_S3_BUCKET") and os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")),
                 "database":"sqlite_local_or_mounted","live_trading_enabled":False}).encode()
             self._send(200,"application/json",body)
         else:
