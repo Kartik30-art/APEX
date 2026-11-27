@@ -12,6 +12,7 @@ class PaperTradingDisabled(RuntimeError):
 class PaperLedger:
     def __init__(self, path: str | Path):
         self.path = str(path)
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _connect(self):
