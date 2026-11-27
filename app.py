@@ -7,6 +7,8 @@ import os
 import base64
 import hmac
 
+STREAM = None
+
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>APEX | Research Workbench</title>
@@ -71,10 +73,15 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 <div class="fields">
 <label>FX symbol<input id="fxSymbol" type="text" value="EUR/USD"></label>
 <label>FX interval<input id="fxInterval" type="text" value="1h"></label>
+<label>FX stream symbols (comma separated)<input id="streamSymbols" type="text" value="EUR/USD"></label>
 <label>India futures symbol<input id="indiaSymbol" type="text" value="USDINR"></label>
 </div>
 <button id="pullFX">Fetch licensed FX history</button>
 <button id="pullIndia">Fetch licensed India history</button>
+<button id="startFXStream">Start real-time FX stream</button>
+<button id="stopFXStream">Stop FX stream</button>
+<button id="refreshFXStream">Refresh stream status</button>
+<div id="streamResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 <div id="dataResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 <label>Research question<textarea id="researchPrompt" rows="4" style="display:block;width:100%;margin:6px 0 12px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px" placeholder="Ask for a critical review of a strategy, dataset or backtest…"></textarea></label>
 <button id="askAI">Ask configured AI models</button><div id="aiResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
@@ -96,6 +103,10 @@ document.getElementById('runBackup').addEventListener('click',async()=>{const ou
 document.getElementById('runContractBacktest').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{if(!fileInput.files.length)throw Error('Choose the historical CSV first');const candles=parseCSV(await fileInput.files[0].text());const payload={candles,symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),fast_window:Number(document.getElementById('fast').value),slow_window:Number(document.getElementById('slow').value),brokerage_per_order:Number(document.getElementById('brokerage').value),exchange_bps:Number(document.getElementById('exchangeFee').value),sebi_bps:Number(document.getElementById('sebiFee').value),stamp_bps:Number(document.getElementById('stampFee').value),transaction_tax_bps:Number(document.getElementById('taxFee').value),gst_percent:Number(document.getElementById('gstFee').value)};const r=await fetch('/api/contract-backtest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Contract backtest failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 document.getElementById('calcContract').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{const payload={symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),side:document.getElementById('contractSide').value,entry_price:Number(document.getElementById('entryPrice').value),exit_price:Number(document.getElementById('exitPrice').value),brokerage_per_order:Number(document.getElementById('brokerage').value),exchange_bps:Number(document.getElementById('exchangeFee').value),sebi_bps:Number(document.getElementById('sebiFee').value),stamp_bps:Number(document.getElementById('stampFee').value),transaction_tax_bps:Number(document.getElementById('taxFee').value),gst_percent:Number(document.getElementById('gstFee').value)};const r=await fetch('/api/valuation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Calculation failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 async function pullData(path,payload){const out=document.getElementById('dataResult');out.textContent='Fetching provider data…';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Provider request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
+async function streamAction(path,payload){const out=document.getElementById('streamResult');try{const r=await fetch(path,{method:payload?'POST':'GET',headers:{'Content-Type':'application/json'},body:payload?JSON.stringify(payload):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Stream request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
+document.getElementById('startFXStream').addEventListener('click',()=>streamAction('/api/data/forex/stream/start',{symbols:document.getElementById('streamSymbols').value.split(',')}));
+document.getElementById('stopFXStream').addEventListener('click',()=>streamAction('/api/data/forex/stream/stop',{}));
+document.getElementById('refreshFXStream').addEventListener('click',()=>streamAction('/api/data/forex/stream/latest'));
 document.getElementById('pullFX').addEventListener('click',()=>pullData('/api/data/forex',{symbol:document.getElementById('fxSymbol').value,interval:document.getElementById('fxInterval').value}));
 document.getElementById('pullIndia').addEventListener('click',()=>pullData('/api/data/india',{symbol:document.getElementById('indiaSymbol').value}));
 document.getElementById('askAI').addEventListener('click',async()=>{const p=document.getElementById('researchPrompt').value.trim();const out=document.getElementById('aiResult');if(!p){out.textContent='Enter a research question.';return;}out.textContent='Contacting configured AI providers…';try{const r=await fetch('/api/ai/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});const d=await r.json();if(!r.ok)throw Error(d.error||'AI request failed');out.textContent=JSON.stringify(d.results,null,2);}catch(e){out.textContent='Error: '+e.message;}});
@@ -185,6 +196,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             body = json.dumps({"status":"ok","mode":"research","live_trading_enabled":False}).encode()
             self._send(200, "application/json", body)
+        elif path == "/api/data/forex/stream/latest":
+            body=json.dumps(STREAM.status() if STREAM else {"state":"stopped","message":"stream not started","latest":{}},allow_nan=False).encode()
+            self._send(200,"application/json",body)
         elif path == "/api/integrations":
             from apex.ai_research import AIResearch
             body = json.dumps({"ai":{"configured":AIResearch().configured()},
@@ -206,6 +220,17 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if path == "/api/backtest":
                 result = _backtest(payload)
+            elif path == "/api/data/forex/stream/start":
+                global STREAM
+                from apex.streaming import TwelveDataForexStream
+                symbols=payload.get("symbols",[])
+                if isinstance(symbols,str): symbols=symbols.split(",")
+                if STREAM and STREAM.status().get("state") not in {"stopped","error"}:
+                    raise ValueError("An FX stream is already active")
+                STREAM=TwelveDataForexStream()
+                result=STREAM.start(symbols)
+            elif path == "/api/data/forex/stream/stop":
+                result=STREAM.stop() if STREAM else {"state":"stopped","message":"stream not started"}
             elif path == "/api/backup":
                 from apex.backup import upload_sqlite_backup
                 from apex.storage import APEXStore
