@@ -47,6 +47,12 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </div><button id="run">Run backtest</button><div id="result" aria-live="polite"></div>
 </section>
 <div class="notice"><strong>Important limitations</strong><br>Backtest P&L is in the instrument's quote currency and excludes contract multipliers, financing, swaps, margin, taxes, exchange/broker fees and currency conversion. This is not a realistic exchange-specific simulation. Historical results do not predict future returns. Do not use this for position sizing or live trading.</div>
+<section class="work"><h2>Connected research providers</h2>
+<p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
+<div id="providers" class="muted">Checking configured providers…</div>
+<label>Research question<textarea id="researchPrompt" rows="4" style="display:block;width:100%;margin:6px 0 12px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px" placeholder="Ask for a critical review of a strategy, dataset or backtest…"></textarea></label>
+<button id="askAI">Ask configured AI models</button><div id="aiResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
+</section>
 <footer>APEX · Personal research build · Live execution permanently disabled in this release · <a href="/healthz" style="color:var(--accent)">health</a></footer>
 </main>
 <script>
@@ -57,6 +63,9 @@ function parseCSV(text){
  for(const k of ['timestamp','open','high','low','close'])if(!headers.includes(k))throw Error('Missing column: '+k);
  return lines.slice(1).filter(Boolean).map((line,i)=>{const cols=line.split(',');const row={};headers.forEach((h,j)=>row[h]=cols[j]?.trim());return {timestamp:row.timestamp,open:row.open,high:row.high,low:row.low,close:row.close,volume:row.volume||'0'};});
 }
+async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
+loadProviders();
+document.getElementById('askAI').addEventListener('click',async()=>{const p=document.getElementById('researchPrompt').value.trim();const out=document.getElementById('aiResult');if(!p){out.textContent='Enter a research question.';return;}out.textContent='Contacting configured AI providers…';try{const r=await fetch('/api/ai/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});const d=await r.json();if(!r.ok)throw Error(d.error||'AI request failed');out.textContent=JSON.stringify(d.results,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 run.addEventListener('click',async()=>{
  try{
   if(!fileInput.files.length)throw Error('Choose a CSV file first');
@@ -143,27 +152,62 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             body = json.dumps({"status":"ok","mode":"research","live_trading_enabled":False}).encode()
             self._send(200, "application/json", body)
+        elif path == "/api/integrations":
+            from apex.ai_research import AIResearch
+            body = json.dumps({"ai":{"configured":AIResearch().configured()},
+                "forex_configured":bool(os.getenv("TWELVEDATA_API_KEY")),
+                "india_configured":bool(os.getenv("APEX_INDIA_DATA_URL")),
+                "database":"sqlite_local_or_mounted","live_trading_enabled":False}).encode()
+            self._send(200,"application/json",body)
         else:
             self._send(200, "text/html; charset=utf-8", PAGE.encode())
 
     def do_POST(self):
         if not self._authorized():
             return
-        if urlsplit(self.path).path != "/api/backtest":
-            self._send(404, "application/json", b'{"error":"not_found"}')
-            return
+        path = urlsplit(self.path).path
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > 15_000_000:
                 raise ValueError("Request must be between 1 byte and 15 MB")
             payload = json.loads(self.rfile.read(length))
-            result = _backtest(payload)
-            body = json.dumps(result, allow_nan=False).encode()
-            self._send(200, "application/json", body)
+            if path == "/api/backtest":
+                result = _backtest(payload)
+            elif path == "/api/ai/research":
+                prompt = str(payload.get("prompt","")).strip()
+                if not prompt or len(prompt)>12000: raise ValueError("prompt must be 1-12000 characters")
+                from apex.ai_research import AIResearch
+                ai=AIResearch()
+                if not ai.configured(): raise ValueError("No AI provider configured. Add an API key in Render Environment.")
+                result={"results":ai.compare(prompt),"disclaimer":"AI output is advisory, may be inaccurate, and cannot place orders."}
+            elif path == "/api/data/forex":
+                symbol=str(payload.get("symbol","EUR/USD")).strip()
+                from apex.providers import TwelveDataForexProvider
+                from apex.storage import APEXStore
+                provider=TwelveDataForexProvider()
+                candles=provider.candles(symbol,interval=str(payload.get("interval","1h")),outputsize=int(payload.get("outputsize",500)))
+                count=APEXStore().save_candles("global_forex",symbol,str(payload.get("interval","1h")),candles,"twelvedata")
+                result={"symbol":symbol,"candles_saved":count,"source":"twelvedata"}
+            elif path == "/api/data/india":
+                symbol=str(payload.get("symbol","USDINR")).strip().upper()
+                from apex.providers import LicensedIndiaJSONProvider
+                from apex.storage import APEXStore
+                candles=LicensedIndiaJSONProvider().candles(symbol)
+                count=APEXStore().save_candles("india_currency_derivatives",symbol,"vendor",candles,"licensed_vendor")
+                result={"symbol":symbol,"candles_saved":count,"source":"configured_licensed_vendor"}
+            else:
+                self._send(404,"application/json",b'{"error":"not_found"}')
+                return
+            body=json.dumps(result,allow_nan=False).encode()
+            self._send(200,"application/json",body)
         except (ValueError, KeyError, TypeError, InvalidOperation, ArithmeticError) as exc:
-            self._send(400, "application/json", json.dumps({"error":str(exc)}).encode())
-        except Exception:
-            self._send(500, "application/json", b'{"error":"internal_error"}')
+            self._send(400,"application/json",json.dumps({"error":str(exc)}).encode())
+        except Exception as exc:
+            # Keep provider credentials and upstream response bodies out of logs/UI.
+            from apex.providers import ProviderNotConfigured
+            from apex.ai_research import AIProviderNotConfigured
+            status=400 if isinstance(exc,(ProviderNotConfigured,AIProviderNotConfigured)) else 502
+            self._send(status,"application/json",json.dumps({"error":str(exc)}).encode())
 
     def log_message(self, fmt, *args):
         print(fmt % args)
