@@ -39,7 +39,7 @@ python app.py
 - Historical OHLC bars cannot reproduce intrabar order sequencing. Stop-loss execution, gaps, spread dynamics and realistic fills are not modeled by the current backtester.
 - SQLite storage includes market candles, paper orders, research/audit tables and integrity-checked backups. An explicit S3-compatible off-site backup action is included. Render's free filesystem is ephemeral; set APEX_DATA_DIR to a persistent mount for live database durability and configure an S3/R2 bucket for off-site snapshots. No cloud bucket or persistent disk is provisioned.
 - Provider adapters exist for Twelve Data FX history and a user-selected licensed India data endpoint. An opt-in Twelve Data WebSocket stream is implemented for entitled symbols; bid/ask is exposed only when the provider sends it. The India feed remains a vendor-configured adapter, not a connected live stream.
-- Advisory-only OpenAI, Gemini and Anthropic API clients exist. They remain disconnected until separate API keys are configured and can incur separate charges.
+- Advisory-only OpenAI, Gemini and Anthropic API clients exist. All external AI calls are blocked by default; enabling them requires an explicit `APEX_ALLOW_PAID_AI=true` setting and may incur charges.
 - No broker account or production broker adapter is connected. Live execution is hard-disabled. No profitability is promised.
 - AI model connections are not configured. Any future AI research output must remain advisory and cannot override deterministic risk checks.
 - Render free services may sleep when idle and cannot guarantee 24/7 uptime.
