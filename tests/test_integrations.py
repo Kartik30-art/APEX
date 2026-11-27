@@ -95,9 +95,9 @@ def test_paid_ai_providers_are_disabled_by_default(monkeypatch):
     monkeypatch.delenv("APEX_ALLOW_PAID_AI", raising=False)
     ai = AIResearch()
     assert ai.configured() == []
-    with pytest.raises(AIProviderNotConfigured, match="Paid AI calls are disabled"):
+    with pytest.raises(AIProviderNotConfigured, match="External AI API calls are disabled"):
         ai.ask("openai", "review")
-    with pytest.raises(AIProviderNotConfigured, match="Paid AI calls are disabled"):
+    with pytest.raises(AIProviderNotConfigured, match="External AI API calls are disabled"):
         ai.ask("anthropic", "review")
 
 
