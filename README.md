@@ -13,7 +13,9 @@ APEX is a personal-use, research-first workbench for studying global Forex and I
 - Research-only web dashboard with CSV upload for historical backtests.
 - Automated unit tests and GitHub Actions test workflow.
 
-## Web workbench
+## Web workbench and access protection
+
+The dashboard is protected by HTTP Basic authentication. Configure a strong, unique `APEX_ACCESS_PASSWORD` environment variable in the Render service before accessing it. The username is `apex`. If the variable is missing, the app remains locked and returns HTTP 503. Use HTTPS (Render's public URL provides TLS); do not commit the password or send it in chat. The password is not created automatically.
 
 The Render service is intended for personal research access. Upload a CSV containing:
 `timestamp,open,high,low,close` and optional `volume`.
@@ -34,7 +36,7 @@ python app.py
 - Backtest output is denominated in the instrument quote currency. It does not model exchange contract multipliers, tick-value conversions, margin, financing, swaps, rollover, taxes, broker/exchange fee schedules, market impact, partial fills, liquidity, or market-specific sessions/calendars.
 - The default MA strategy is a coding example, not a validated trading edge. There is no parameter search, walk-forward/holdout framework, robustness analysis, or protection against multiple-testing/data-snooping bias yet.
 - Historical OHLC bars cannot reproduce intrabar order sequencing. Stop-loss execution, gaps, spread dynamics and realistic fills are not modeled by the current backtester.
-- The SQLite paper ledger is a local module and is not exposed through the public dashboard. Render's free filesystem is ephemeral; data stored there can disappear on restart/redeploy/spin-down. Do not treat cloud storage as durable.
+- The SQLite paper ledger is a local module and is not exposed through the dashboard. Render's free filesystem is ephemeral; data stored there can disappear on restart/redeploy/spin-down. Do not treat cloud storage as durable.
 - No licensed market-data provider, live feed, broker, credentials, order router, or live execution is connected. No profitability is promised.
 - AI model connections are not configured. Any future AI research output must remain advisory and cannot override deterministic risk checks.
 - Render free services may sleep when idle and cannot guarantee 24/7 uptime.
