@@ -69,7 +69,9 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
-<div id="providers" class="muted">Checking configured providers…</div><button id="runBackup">Create and upload off-site database backup</button><div id="backupResult" class="muted" style="margin-top:8px"></div>
+<div id="providers" class="muted">Checking configured providers…</div>
+<a href="/api/backup/download" style="display:inline-block;margin:10px 12px 10px 0;color:var(--accent)">Download verified database snapshot</a>
+<button id="runBackup">Upload snapshot to configured S3/R2 storage</button><div id="backupResult" class="muted" style="margin-top:8px"></div>
 <div class="fields">
 <label>FX symbol<input id="fxSymbol" type="text" value="EUR/USD"></label>
 <label>FX interval<input id="fxInterval" type="text" value="1h"></label>
@@ -190,12 +192,32 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def do_GET(self):
-        if not self._authorized():
-            return
         path = urlsplit(self.path).path
+        # Public, non-sensitive health probe for hosting infrastructure.
         if path == "/healthz":
             body = json.dumps({"status":"ok","mode":"research","live_trading_enabled":False}).encode()
             self._send(200, "application/json", body)
+            return
+        if not self._authorized():
+            return
+        if path == "/api/backup/download":
+            import tempfile
+            from pathlib import Path
+            from apex.storage import APEXStore
+            with tempfile.TemporaryDirectory(prefix="apex-download-") as tmp:
+                snapshot=Path(tmp)/"apex-backup.sqlite3"
+                metadata=APEXStore().backup(str(snapshot))
+                self.send_response(200)
+                self.send_header("Content-Type","application/vnd.sqlite3")
+                self.send_header("Content-Disposition",'attachment; filename="apex-backup.sqlite3"')
+                self.send_header("Content-Length",str(snapshot.stat().st_size))
+                self.send_header("X-APEX-SHA256",metadata["sha256"])
+                self.send_header("Cache-Control","no-store")
+                self.end_headers()
+                with snapshot.open("rb") as stream:
+                    for chunk in iter(lambda:stream.read(1024*1024),b""):
+                        self.wfile.write(chunk)
+            return
         elif path == "/api/data/forex/stream/latest":
             body=json.dumps(STREAM.status() if STREAM else {"state":"stopped","message":"stream not started","latest":{}},allow_nan=False).encode()
             self._send(200,"application/json",body)
