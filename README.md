@@ -11,7 +11,7 @@ APEX is a personal-use, research-first workbench for studying global Forex and I
 - Expanding-window walk-forward validation module.
 - SQLite paper-trade journal requiring both paper mode and explicit user confirmation; unique client IDs prevent duplicate journal entries.
 - Append-only JSONL audit logger.
-- Research-only web dashboard with CSV upload for historical backtests.
+- Research-only web dashboard with CSV upload for generic and contract-aware historical backtests, licensed-provider controls, AI research comparison, WebSocket status, and a verified database snapshot download.
 - Automated unit tests and GitHub Actions test workflow.
 
 ## Web workbench and access protection
@@ -34,8 +34,8 @@ python app.py
 
 ## Critical limitations
 
-- Backtest output is denominated in the instrument quote currency. It does not model exchange contract multipliers, tick-value conversions, margin, financing, swaps, rollover, taxes, broker/exchange fee schedules, market impact, partial fills, liquidity, or market-specific sessions/calendars.
-- The default MA strategy is a coding example, not a validated trading edge. There is no parameter search, walk-forward/holdout framework, robustness analysis, or protection against multiple-testing/data-snooping bias yet.
+- The generic OHLC backtest reports quote-currency P&L. The separate INR futures backtest applies reference contract units, quotation convention, tick value and user-entered fee assumptions, but does not model margin, financing, swaps, rollover, market impact, partial fills, liquidity, or current market-specific sessions/calendars.
+- The default MA strategy is a coding example, not a validated trading edge. A basic expanding-window walk-forward splitter exists, but there is no parameter-search discipline, broad robustness suite, or protection against multiple-testing/data-snooping bias.
 - Historical OHLC bars cannot reproduce intrabar order sequencing. Stop-loss execution, gaps, spread dynamics and realistic fills are not modeled by the current backtester.
 - SQLite storage includes market candles, paper orders, research/audit tables and integrity-checked backups. An explicit S3-compatible off-site backup action is included. Render's free filesystem is ephemeral; set APEX_DATA_DIR to a persistent mount for live database durability and configure an S3/R2 bucket for off-site snapshots. No cloud bucket or persistent disk is provisioned.
 - Provider adapters exist for Twelve Data FX history and a user-selected licensed India data endpoint. An opt-in Twelve Data WebSocket stream is implemented for entitled symbols; bid/ask is exposed only when the provider sends it. The India feed remains a vendor-configured adapter, not a connected live stream.
