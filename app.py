@@ -47,6 +47,18 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </div><button id="run">Run backtest</button><div id="result" aria-live="polite"></div>
 </section>
 <div class="notice"><strong>Important limitations</strong><br>Backtest P&L is in the instrument's quote currency and excludes contract multipliers, financing, swaps, margin, taxes, exchange/broker fees and currency conversion. This is not a realistic exchange-specific simulation. Historical results do not predict future returns. Do not use this for position sizing or live trading.</div>
+<section class="work"><h2>INR futures contract calculator</h2>
+<p class="muted">Reference contract math for NSE USDINR, EURINR, GBPINR and JPYINR futures. Confirm current contract metadata. Fee defaults are zero and are not actual broker charges.</p>
+<div class="fields">
+<label>Symbol<select id="contractSymbol"><option>USDINR</option><option>EURINR</option><option>GBPINR</option><option>JPYINR</option></select></label>
+<label>Contracts<input id="contracts" type="number" min="1" value="1"></label>
+<label>Side<select id="contractSide"><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
+<label>Entry price<input id="entryPrice" type="number" min="0.00001" step="any" value="83"></label>
+<label>Exit price<input id="exitPrice" type="number" min="0.00001" step="any" value="83.01"></label>
+<label>Brokerage/order (INR)<input id="brokerage" type="number" min="0" step="any" value="0"></label>
+</div>
+<button id="calcContract">Calculate contract P&amp;L</button><div id="contractResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
+</section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
 <div id="providers" class="muted">Checking configured providers…</div>
@@ -73,6 +85,7 @@ function parseCSV(text){
 }
 async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
 loadProviders();
+document.getElementById('calcContract').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{const payload={symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),side:document.getElementById('contractSide').value,entry_price:Number(document.getElementById('entryPrice').value),exit_price:Number(document.getElementById('exitPrice').value),brokerage_per_order:Number(document.getElementById('brokerage').value)};const r=await fetch('/api/valuation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Calculation failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 async function pullData(path,payload){const out=document.getElementById('dataResult');out.textContent='Fetching provider data…';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Provider request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
 document.getElementById('pullFX').addEventListener('click',()=>pullData('/api/data/forex',{symbol:document.getElementById('fxSymbol').value,interval:document.getElementById('fxInterval').value}));
 document.getElementById('pullIndia').addEventListener('click',()=>pullData('/api/data/india',{symbol:document.getElementById('indiaSymbol').value}));
@@ -184,6 +197,13 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if path == "/api/backtest":
                 result = _backtest(payload)
+            elif path == "/api/valuation":
+                from apex.instruments import NSE_INR_FUTURES, FeeSchedule, calculate_futures_valuation
+                symbol=str(payload.get("symbol","")).upper()
+                if symbol not in NSE_INR_FUTURES: raise ValueError("Unsupported reference contract")
+                fees=FeeSchedule(brokerage_per_order=Decimal(str(payload.get("brokerage_per_order",0))))
+                v=calculate_futures_valuation(NSE_INR_FUTURES[symbol],contracts=int(payload.get("contracts",1)),entry_price=Decimal(str(payload["entry_price"])),exit_price=Decimal(str(payload["exit_price"])),side=str(payload.get("side","buy")),fees=fees)
+                result={"symbol":symbol,"metadata_version":NSE_INR_FUTURES[symbol].metadata_version,"contracts":v.contracts,"notional_quote":str(v.notional_quote),"tick_size":str(NSE_INR_FUTURES[symbol].tick_size),"tick_value_quote":str(v.tick_value_quote),"gross_pnl_quote":str(v.gross_pnl_quote),"estimated_fees_quote":str(v.estimated_fees_quote),"net_pnl_quote":str(v.net_pnl_quote),"currency":"INR","warning":"Reference contract specification only. Verify current exchange contract master and enter actual applicable fees; zero fee defaults are not actual charges."}
             elif path == "/api/ai/research":
                 prompt = str(payload.get("prompt","")).strip()
                 if not prompt or len(prompt)>12000: raise ValueError("prompt must be 1-12000 characters")
