@@ -10,7 +10,7 @@
 - `risk.py`: deterministic baseline checks; not contract-aware and not approved for live sizing.
 - `paper.py`: SQLite paper journal with explicit confirmation and idempotent client IDs; not exposed by the web API.
 - `audit.py`: append-only JSONL event log.
-- `app.py`: research-only dashboard and CSV backtest endpoint.
+- `app.py`: HTTP Basic-authenticated research-only dashboard and CSV backtest endpoint. It requires `APEX_ACCESS_PASSWORD` and refuses access if it is unset.
 
 ## Trust boundaries
 
@@ -32,4 +32,4 @@ The paper journal is a separate local module and is not automatically fed from b
 
 ## Deployment caveats
 
-Render free web services may sleep when idle. Their filesystem is ephemeral; SQLite/JSONL files written to the service can be lost on restart, redeploy or spin-down. Do not use Render's local filesystem as durable trade storage. The current dashboard has no user authentication, so the public URL must not be treated as a private or confidential workspace.
+Render free web services may sleep when idle. Their filesystem is ephemeral; SQLite/JSONL files written to the service can be lost on restart, redeploy or spin-down. Do not use Render's local filesystem as durable trade storage. The dashboard now uses HTTP Basic authentication. Configure a strong `APEX_ACCESS_PASSWORD` in Render; until configured, it returns HTTP 503. Treat the password as a secret and rotate it if exposed.
