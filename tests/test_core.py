@@ -31,3 +31,10 @@ def test_market_execution_disabled():
     from apex.markets import GLOBAL_FOREX, INDIA_CURRENCY_DERIVATIVES
     assert not GLOBAL_FOREX.execution_allowed
     assert not INDIA_CURRENCY_DERIVATIVES.execution_allowed
+
+def test_non_finite_candles_are_rejected():
+    now = datetime.now(timezone.utc)
+    bad = Candle(now, Decimal("1"), Decimal("Infinity"), Decimal("0.9"), Decimal("NaN"))
+    report = validate_candles([bad])
+    assert not report.valid
+    assert any("finite" in error for error in report.errors)
