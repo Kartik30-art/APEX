@@ -16,7 +16,7 @@
 
 ## Global Forex data
 
-TwelveDataForexProvider reads TWELVEDATA_API_KEY and supports REST quote and OHLC time-series calls. Confirm the vendor plan permits automated use, retention and display. It is not called automatically at startup. Docs: https://twelvedata.com/docs
+TwelveDataForexProvider reads TWELVEDATA_API_KEY and supports historical OHLC time-series calls. TwelveDataForexStream opens an opt-in WebSocket for live price ticks; only symbols and bid/ask fields actually returned by the vendor are exposed. The dashboard lets you start/stop a stream and inspect its latest in-memory ticks. Confirm the vendor plan permits your intended use. The free Basic plan limits WebSocket use to trial symbols (up to 8 simultaneous subscriptions); full WebSocket coverage requires a higher tier. Each subscribed symbol consumes a WebSocket credit. No stream starts automatically and Render free hosting cannot guarantee 24/7 connections. Docs: https://twelvedata.com/docs/websocket/websocket-getting-started
 
 ## India exchange data
 
