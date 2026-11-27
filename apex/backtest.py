@@ -71,6 +71,16 @@ def run_backtest(candles: Sequence[Candle], strategy: Strategy, config: Backtest
     slippage = config.slippage_bps_per_side
     fee_rate = config.fee_bps_per_side / Decimal("10000")
 
+    def mark_to_market(bar: Candle):
+        nonlocal peak, max_dd
+        unrealized = Decimal("0")
+        if position is not None:
+            unrealized = (bar.close - position["entry_price"]) * Decimal(position["direction"]) * config.quantity
+        marked_equity = equity + unrealized
+        peak = max(peak, marked_equity)
+        if peak > 0:
+            max_dd = max(max_dd, (peak - marked_equity) / peak)
+
     def close_position(bar: Candle, raw_price: Decimal, reason: str):
         nonlocal position, equity, peak, max_dd
         held = position["direction"]
@@ -103,6 +113,7 @@ def run_backtest(candles: Sequence[Candle], strategy: Strategy, config: Backtest
             entry_transaction = "buy" if desired == 1 else "sell"
             entry = _execution_price(next_bar.open, entry_transaction, slippage)
             position = {"direction": desired, "entry_price": entry, "entry_time": next_bar.timestamp.isoformat()}
+        mark_to_market(next_bar)
 
     if position is not None:
         last = candles[-1]
