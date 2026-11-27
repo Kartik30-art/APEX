@@ -32,10 +32,11 @@ class TwelveDataForexProvider:
             raise ProviderNotConfigured("Set TWELVEDATA_API_KEY in the deployment environment")
 
     def quote(self, symbol: str) -> Quote:
-        params = urlencode({"symbol":symbol,"apikey":self.api_key})
-        data = _json_get(f"{self.BASE}/quote?{params}")
-        stamp = datetime.fromisoformat(data["datetime"].replace(" ","T")).replace(tzinfo=timezone.utc)
-        return Quote(symbol,Decimal(str(data["bid"])),Decimal(str(data["ask"])),stamp,"twelvedata")
+        raise ProviderError(
+            "This historical REST adapter does not provide a verified two-sided "
+            "executable bid/ask quote. Use candles for research; connect a licensed "
+            "bid/ask streaming feed before spread-sensitive paper execution."
+        )
 
     def candles(self, symbol: str, interval: str = "1min", outputsize: int = 500) -> list[Candle]:
         if not 2 <= outputsize <= 5000: raise ValueError("outputsize must be between 2 and 5000")
