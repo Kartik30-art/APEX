@@ -24,9 +24,9 @@ LicensedIndiaJSONProvider reads APEX_INDIA_DATA_URL and optional APEX_INDIA_DATA
 
 ## AI research
 
-Set OPENAI_API_KEY, GEMINI_API_KEY and/or ANTHROPIC_API_KEY. Optional model overrides: OPENAI_MODEL, GEMINI_MODEL, ANTHROPIC_MODEL. AIResearch.compare() invokes configured providers independently. API requests can incur charges; ChatGPT subscriptions do not automatically include API credits. AI output is advisory and never routed to a broker.
+Set OPENAI_API_KEY, GEMINI_API_KEY and/or ANTHROPIC_API_KEY. Defaults use the OpenAI Responses API (`gpt-6.2-astra`), Gemini `generateContent` (`gemini-3.8-flash`) and Anthropic Messages API (`claude-sonnet-5-5`). Override model IDs with OPENAI_MODEL, GEMINI_MODEL and ANTHROPIC_MODEL after checking provider availability in your account. AIResearch.compare() invokes configured providers independently. API requests can incur charges; ChatGPT subscriptions do not automatically include API credits. AI output is advisory and never routed to a broker.
 
-Official docs: https://developers.openai.com/api/reference ; https://ai.google.dev/api ; https://docs.anthropic.com/en/api
+Official docs: https://developers.openai.com/api/reference ; https://ai.google.dev/api ; https://platform.claude.com/docs/en/claude_api_primer
 
 ## NSE INR futures reference metadata
 
