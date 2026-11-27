@@ -21,7 +21,7 @@ def upload_sqlite_backup(store: APEXStore, *, bucket: str | None = None,
     try:
         import boto3
     except ImportError as exc:
-        raise BackupNotConfigured("Install optional cloud dependencies: pip install '.[cloud]'") from exc
+        raise BackupNotConfigured("The S3 SDK is not installed; rebuild APEX after adding boto3") from exc
     import tempfile
     with tempfile.TemporaryDirectory(prefix="apex-backup-") as tmp:
         local = Path(tmp) / "apex.sqlite3"
@@ -30,7 +30,6 @@ def upload_sqlite_backup(store: APEXStore, *, bucket: str | None = None,
         key = "/".join(x.strip("/") for x in (prefix or os.getenv("APEX_S3_PREFIX", "apex"), local.name))
         client.upload_file(str(local), bucket, key, ExtraArgs={
             "Metadata": {"sha256": metadata["sha256"], "integrity": "ok"},
-            "ServerSideEncryption": "AES256",
         })
     return {"bucket": bucket, "key": key, "sha256": metadata["sha256"],
             "bytes": metadata["bytes"], "integrity": "ok"}
