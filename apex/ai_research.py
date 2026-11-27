@@ -59,7 +59,7 @@ class AIResearch:
             data=_post("https://api.openai.com/v1/responses",
                        {"Authorization":f"Bearer {key}"},
                        {"model":model,"instructions":instructions,
-                        "input":prompt,"temperature":0.2})
+                        "input":prompt})
             return _openai_text(data)
         if provider=="gemini":
             model=os.getenv("GEMINI_MODEL","gemini-3.8-flash")
