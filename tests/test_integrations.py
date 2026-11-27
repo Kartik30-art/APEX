@@ -44,6 +44,7 @@ def test_adapters_fail_closed_without_credentials(monkeypatch):
 def test_openai_uses_responses_api_and_extracts_text(monkeypatch):
     import apex.ai_research as module
     monkeypatch.setenv("OPENAI_API_KEY","test-key")
+    monkeypatch.setenv("APEX_ALLOW_PAID_AI","true")
     calls=[]
     def fake_post(url,headers,payload):
         calls.append((url,headers,payload))
@@ -58,6 +59,7 @@ def test_openai_uses_responses_api_and_extracts_text(monkeypatch):
 def test_gemini_api_key_is_sent_in_header(monkeypatch):
     import apex.ai_research as module
     monkeypatch.setenv("GEMINI_API_KEY","test-key")
+    monkeypatch.setenv("APEX_ALLOW_PAID_AI","true")
     calls=[]
     def fake_post(url,headers,payload):
         calls.append((url,headers,payload))
@@ -71,6 +73,7 @@ def test_gemini_api_key_is_sent_in_header(monkeypatch):
 def test_claude_uses_current_default_model(monkeypatch):
     import apex.ai_research as module
     monkeypatch.setenv("ANTHROPIC_API_KEY","test-key")
+    monkeypatch.setenv("APEX_ALLOW_PAID_AI","true")
     calls=[]
     def fake_post(url,headers,payload):
         calls.append(payload)
@@ -81,6 +84,7 @@ def test_claude_uses_current_default_model(monkeypatch):
 
 def test_ai_prompt_validation(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY","test-key")
+    monkeypatch.setenv("APEX_ALLOW_PAID_AI","true")
     with pytest.raises(ValueError):
         AIResearch().ask("openai"," ")
 
