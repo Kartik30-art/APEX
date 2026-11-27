@@ -1,4 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlsplit
 import json
 import os
 
@@ -31,18 +32,18 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:18px;color:v
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == "/healthz":
+        path = urlsplit(self.path).path
+        if path == "/healthz":
             body = json.dumps({"status": "ok", "mode": "research", "live_trading_enabled": False}).encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-        elif self.path == "/":
-            body = PAGE.encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
+            content_type = "application/json"
+            status = 200
         else:
-            body = b'{"error":"not_found"}'
-            self.send_response(404)
-            self.send_header("Content-Type", "application/json")
+            # Keep the dashboard reachable for deep links, query strings and browser probes.
+            body = PAGE.encode()
+            content_type = "text/html; charset=utf-8"
+            status = 200
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
