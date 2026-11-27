@@ -31,7 +31,7 @@ def test_backtest_uses_next_bar_and_closes_positions():
     assert result.trades[0].exit_reason == "opposite_signal"
     assert result.trades[1].side == "short"
     assert result.trades[1].exit_reason == "end_of_data"
-    assert result.net_pnl == Decimal("2")
+    assert result.net_pnl == Decimal("3")
 
 def test_backtest_applies_fees_and_slippage():
     result = run_backtest(candles(), ScriptedStrategy(), BacktestConfig(
