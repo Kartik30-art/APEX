@@ -24,7 +24,7 @@ LicensedIndiaJSONProvider reads APEX_INDIA_DATA_URL and optional APEX_INDIA_DATA
 
 ## AI research
 
-Set GEMINI_API_KEY for Gemini, or the corresponding provider key for other models. Defaults use the OpenAI Responses API (`gpt-6.2-astra`), Gemini `generateContent` (`gemini-3.8-flash`) and Anthropic Messages API (`claude-sonnet-5-5`). Override model IDs with OPENAI_MODEL, GEMINI_MODEL and ANTHROPIC_MODEL after checking provider availability in your account. Gemini calls are only attempted when its key is configured. OpenAI and Anthropic are treated as paid APIs and are blocked by default; explicitly set `APEX_ALLOW_PAID_AI=true` only after approving charges. `AIResearch.compare()` invokes only eligible configured providers. ChatGPT subscriptions do not automatically include API credits. AI output is advisory and never routed to a broker.
+Set the provider API key and model ID only when you are ready to use an external service. All external AI API calls are disabled by default under the zero-rupee budget. The explicit opt-in `APEX_ALLOW_PAID_AI=true` enables calls to any configured provider and may incur charges; do not set it unless you approve those charges and have checked the provider's current model catalogue and pricing. Model IDs can be selected with OPENAI_MODEL, GEMINI_MODEL and ANTHROPIC_MODEL. `AIResearch.compare()` invokes only providers with keys when the explicit opt-in is enabled. ChatGPT subscriptions do not automatically include API credits. AI output is advisory and never routed to a broker.
 
 Official docs: https://developers.openai.com/api/reference ; https://ai.google.dev/api ; https://platform.claude.com/docs/en/claude_api_primer
 
