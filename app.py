@@ -62,7 +62,7 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
-<div id="providers" class="muted">Checking configured providers…</div>
+<div id="providers" class="muted">Checking configured providers…</div><button id="runBackup">Create and upload encrypted-storage backup</button><div id="backupResult" class="muted" style="margin-top:8px"></div>
 <div class="fields">
 <label>FX symbol<input id="fxSymbol" type="text" value="EUR/USD"></label>
 <label>FX interval<input id="fxInterval" type="text" value="1h"></label>
@@ -84,8 +84,10 @@ function parseCSV(text){
  for(const k of ['timestamp','open','high','low','close'])if(!headers.includes(k))throw Error('Missing column: '+k);
  return lines.slice(1).filter(Boolean).map((line,i)=>{const cols=line.split(',');const row={};headers.forEach((h,j)=>row[h]=cols[j]?.trim());return {timestamp:row.timestamp,open:row.open,high:row.high,low:row.low,close:row.close,volume:row.volume||'0'};});
 }
-async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
+async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Off-site backup: '+(d.backup_configured?'configured':'not configured')+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
 loadProviders();
+document.getElementById('runBackup').addEventListener('click',async()=>{const out=document.getElementById('backupResult');out.textContent='Creating backup and uploading…';try{const r=await fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const d=await r.json();if(!r.ok)throw Error(d.error||'Backup failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
+
 document.getElementById('runContractBacktest').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{if(!fileInput.files.length)throw Error('Choose the historical CSV first');const candles=parseCSV(await fileInput.files[0].text());const payload={candles,symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),fast_window:Number(document.getElementById('fast').value),slow_window:Number(document.getElementById('slow').value),brokerage_per_order:Number(document.getElementById('brokerage').value)};const r=await fetch('/api/contract-backtest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Contract backtest failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 document.getElementById('calcContract').addEventListener('click',async()=>{const out=document.getElementById('contractResult');try{const payload={symbol:document.getElementById('contractSymbol').value,contracts:Number(document.getElementById('contracts').value),side:document.getElementById('contractSide').value,entry_price:Number(document.getElementById('entryPrice').value),exit_price:Number(document.getElementById('exitPrice').value),brokerage_per_order:Number(document.getElementById('brokerage').value)};const r=await fetch('/api/valuation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Calculation failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
 async function pullData(path,payload){const out=document.getElementById('dataResult');out.textContent='Fetching provider data…';try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error||'Provider request failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}}
@@ -182,7 +184,7 @@ class Handler(BaseHTTPRequestHandler):
             from apex.ai_research import AIResearch
             body = json.dumps({"ai":{"configured":AIResearch().configured()},
                 "forex_configured":bool(os.getenv("TWELVEDATA_API_KEY")),
-                "india_configured":bool(os.getenv("APEX_INDIA_DATA_URL")),
+                "india_configured":bool(os.getenv("APEX_INDIA_DATA_URL")),\n                "backup_configured":bool(os.getenv("APEX_S3_BUCKET") and os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")),
                 "database":"sqlite_local_or_mounted","live_trading_enabled":False}).encode()
             self._send(200,"application/json",body)
         else:
@@ -199,6 +201,10 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if path == "/api/backtest":
                 result = _backtest(payload)
+            elif path == "/api/backup":
+                from apex.backup import upload_sqlite_backup
+                from apex.storage import APEXStore
+                result=upload_sqlite_backup(APEXStore())
             elif path == "/api/contract-backtest":
                 from apex.contract_backtest import run_contract_backtest
                 from apex.instruments import NSE_INR_FUTURES, FeeSchedule
