@@ -40,7 +40,7 @@ FeeSchedule accepts explicit brokerage, exchange, SEBI, stamp, transaction-tax a
 
 ## Durable storage and backup
 
-APEXStore defaults to data/apex.sqlite3; set APEX_DATA_DIR to a persistent mount. backup(path) uses SQLite online backup and checks PRAGMA integrity_check, returning SHA-256. Copy the result to separate durable storage. Render free service storage is ephemeral, so this code alone does not make cloud data durable.
+APEXStore defaults to data/apex.sqlite3; set APEX_DATA_DIR to a persistent mount. backup(path) uses SQLite online backup and checks PRAGMA integrity_check, returning SHA-256. The dashboard's explicit backup action can upload a verified snapshot to AWS S3 or an S3-compatible endpoint (including R2) when APEX_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, optional AWS_DEFAULT_REGION, and optional APEX_S3_ENDPOINT_URL are configured. Set APEX_S3_PREFIX if desired. No upload occurs automatically. Object storage may incur charges; create and configure your own bucket and lifecycle policy. Render free service storage is ephemeral, so code alone does not make the live database durable.
 
 ## Broker and Indian regulatory gate
 
