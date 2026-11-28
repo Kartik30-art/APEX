@@ -18,6 +18,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from apex.shadow import ShadowLedger
+
 WATCHLIST = {
     "EURUSD=X": "EUR/USD",
     "GBPUSD=X": "GBP/USD",
@@ -120,6 +122,7 @@ class AutonomousDemoAgent:
         }
         self._events: list[dict] = []
         self._init_db()
+        self.shadow = ShadowLedger(self.path)
 
     def _connect(self):
         db = sqlite3.connect(self.path, timeout=15)
@@ -236,6 +239,9 @@ class AutonomousDemoAgent:
         elif fast < slow and 32 <= rsi <= 48 and mom < 0:
             side, reason = "sell", "EMA 9 below EMA 21; RSI confirms bearish momentum"
         score = min(100.0, abs((fast / slow - 1) * 10000) * 2 + abs(mom) * 4 + abs(rsi - 50) * 0.5)
+        # Record a heuristic signal for observation only; this never routes an order.
+        self.shadow.observe(label, side or "neutral", bars[-1]["timestamp"],
+                            indicators["price"], reason)
         return {"symbol": label, "ticker": ticker, "price": indicators["price"],
                 "ema_fast": fast, "ema_slow": slow, "rsi": rsi, "atr": indicators["atr"],
                 "momentum_3": mom, "score": round(score, 2), "signal": side or "neutral",
@@ -325,6 +331,7 @@ class AutonomousDemoAgent:
             events = list(self._events)
         account = self._account()
         return {**status, "account": account, "events": events,
+                "shadow": self.shadow.summary(limit=50),
                 "watchlist": list(WATCHLIST.values()), "live_trading_enabled": False}
 
     def chart(self, symbol: str):
