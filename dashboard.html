@@ -2,107 +2,63 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>APEX · Autonomous Demo Desk</title>
+<title>APEX · Model Execution Chart</title>
 <style>
-:root{color-scheme:dark;--bg:#080c14;--panel:#111a28;--panel2:#151f30;--line:#26364b;--muted:#93a4bb;--text:#edf3fc;--mint:#75e0bd;--red:#ff7d87;--amber:#e9bd6d}
+:root{color-scheme:dark;--bg:#080c14;--panel:#111a28;--line:#26364b;--muted:#93a4bb;--text:#edf3fc;--mint:#75e0bd;--amber:#e9bd6d}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#1b3551 0,transparent 50%),var(--bg);color:var(--text);font:14px/1.55 Inter,system-ui,sans-serif}
-main{max-width:1440px;margin:auto;padding:28px 24px}.head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{font-size:22px;font-weight:850;letter-spacing:.22em}.brand i{color:var(--mint);font-style:normal}.status{border:1px solid #346b5d;color:var(--mint);border-radius:30px;padding:7px 12px;font-size:11px;letter-spacing:.12em}
-h1{font-size:32px;letter-spacing:-.04em;margin:34px 0 5px}.sub{color:var(--muted);margin:0 0 24px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.panel{background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px;padding:18px;min-width:0}.metric small,.eyebrow{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}.metric strong{display:block;font-size:25px;margin-top:7px;font-weight:700}.mint{color:var(--mint)}.red{color:var(--red)}.amber{color:var(--amber)}
-.layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(290px,1fr);gap:14px;margin-top:14px}.panel h2{font-size:14px;letter-spacing:.06em;margin:0 0 14px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.select{background:#0b1320;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:8px}
-canvas{width:100%;height:320px;display:block;background:#0b1320;border-radius:10px;border:1px solid #1d2a3c}.chart-meta{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:12px 0 0}
-table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:500}.rank{color:var(--mint);font-weight:700}.signal{font-size:10px;border-radius:20px;padding:4px 8px;background:#1d3d36;color:var(--mint)}.signal.neutral{background:#283142;color:#b9c4d4}.signal.sell{background:#48242c;color:var(--red)}
-.scroll{max-height:270px;overflow:auto}.event{padding:10px 0;border-bottom:1px solid var(--line)}.event:last-child{border:0}.event small{display:block;color:var(--muted);font-size:10px}.event p{margin:3px 0}.empty{color:var(--muted);padding:20px 0;text-align:center}
-.funding{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.funding input{width:145px;background:#0b1320;color:var(--text);border:1px solid var(--line);padding:9px;border-radius:8px}button{background:var(--mint);color:#06130f;border:0;padding:9px 13px;border-radius:8px;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.note{color:var(--muted);font-size:11px;margin-top:9px}.footer{color:var(--muted);font-size:11px;margin:20px 2px 0;line-height:1.6}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.layout{grid-template-columns:1fr}}@media(max-width:520px){main{padding:18px 12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.metric strong{font-size:20px}h1{font-size:26px}canvas{height:250px}}
+main{max-width:1200px;margin:auto;padding:24px 18px}.head{display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-size:22px;font-weight:850;letter-spacing:.22em}.brand i{color:var(--mint);font-style:normal}.status{color:var(--mint);font-size:11px;letter-spacing:.1em}
+.panel{background:linear-gradient(145deg,#151f30,var(--panel));border:1px solid var(--line);border-radius:15px;padding:18px;margin-top:16px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pair{font-size:18px;font-weight:750}.hint,.note{color:var(--muted);font-size:12px}canvas{width:100%;height:min(62vh,560px);min-height:300px;display:block;background:#0b1320;border-radius:10px;border:1px solid #1d2a3c;margin-top:12px}
+.funding{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.funding input{width:180px;background:#0b1320;color:var(--text);border:1px solid var(--line);padding:11px;border-radius:8px;font-size:15px}button{background:var(--mint);color:#06130f;border:0;padding:11px 16px;border-radius:8px;font-weight:750;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.note{margin-top:9px}
+@media(max-width:520px){main{padding:16px 10px}.panel{padding:12px}canvas{min-height:260px;height:52vh}.status{font-size:9px}}
 </style>
 </head>
 <body><main>
-<header class="head"><div class="brand">APEX<i>.</i></div><div class="status">AUTONOMOUS DEMO MODE · LIVE ORDERS OFF</div></header>
-<h1>AI market operations</h1>
-<p class="sub">The agent applies deterministic EMA/RSI rules, ranks setups, studies price charts and manages simulated positions. This dashboard is for observation; the trained ML models remain research-only.</p>
-<div class="grid">
- <section class="panel metric"><small>Demo account equity · USD</small><strong id="equity">$10,000.00</strong><div class="note">Virtual funds only</div></section>
- <section class="panel metric"><small>Available demo balance</small><strong id="balance">$10,000.00</strong><div class="note">Real money never moves</div></section>
- <section class="panel metric"><small>Unrealized demo P/L</small><strong id="unrealized">$0.00</strong><div class="note">Marked against latest candle</div></section>
- <section class="panel metric"><small>Open demo positions</small><strong id="openCount">0</strong><div class="note" id="agentState">Starting agent…</div></section>
-</div>
-<div class="layout">
- <section class="panel">
-  <div class="toolbar"><h2>MARKET CHART · 15M</h2><select class="select" id="symbol"></select></div>
-  <canvas id="chart" width="1100" height="360"></canvas>
-  <div class="chart-meta" id="chartMeta"><span>Waiting for completed market candles…</span></div>
- </section>
- <section class="panel">
-  <h2>AGENT STATUS</h2>
-  <div class="metric"><small>Current operation</small><strong id="stateText" style="font-size:18px">Connecting…</strong></div>
-  <p class="note" id="stateMessage">Starting autonomous market scan.</p>
-  <div class="event"><small>Last scan</small><span id="lastScan">—</span></div>
-  <div class="event"><small>Market data source</small><span id="source">Public market data</span></div>
-  <div class="event"><small>Strategy</small><span>EMA 9/21 · RSI 14 · ATR stops · 2R target</span></div>
-  <div class="event"><small>Risk controls</small><span>0.5% demo equity risk · max 1 open position · 5× notional cap</span></div>
- </section>
-</div>
-<div class="layout">
- <section class="panel"><h2>AI ASSET SCANNER · RULE-BASED RANKED WATCHLIST</h2><div class="scroll"><table><thead><tr><th>Rank</th><th>Asset</th><th>Price</th><th>Signal</th><th>RSI</th><th>Score</th></tr></thead><tbody id="assets"><tr><td colspan="6" class="empty">Waiting for first scan…</td></tr></tbody></table></div></section>
- <section class="panel"><h2>DEMO POSITIONS</h2><div class="scroll"><table><thead><tr><th>Asset / Side</th><th>Entry</th><th>Stop</th><th>Target</th></tr></thead><tbody id="positions"><tr><td colspan="4" class="empty">No open positions</td></tr></tbody></table></div></section>
-</div>
-<div class="layout">
- <section class="panel"><h2>EXECUTION TIMELINE</h2><div id="events" class="scroll"><div class="empty">Agent events will appear here.</div></div></section>
- <section class="panel"><h2>REQUEST VIRTUAL DEMO FUNDS</h2>
-  <div class="funding"><input id="fundAmount" type="number" min="1" step="1" value="5000" aria-label="Demo funds amount"><button id="fundButton">Add demo funds</button></div>
-  <div class="note" id="fundMessage">Adds virtual USD to this demo account only. No payment, deposit or real currency is involved.</div>
-  <div class="note">Initial demo balance is configured by the system. Funding requests are recorded in the execution timeline.</div>
- </section>
-</div>
-<div class="layout">
- <section class="panel">
-  <h2>SHADOW SIGNAL TRACKER · NO ORDERS</h2>
-  <div class="grid">
-   <div class="metric"><small>Recorded signals</small><strong id="shadowTotal">0</strong></div>
-   <div class="metric"><small>Evaluated signals</small><strong id="shadowEvaluated">0</strong></div>
-   <div class="metric"><small>Directional accuracy</small><strong id="shadowAccuracy">—</strong></div>
-   <div class="metric"><small>Correct / incorrect</small><strong id="shadowRecord">0 / 0</strong></div>
-  </div>
-  <div class="note" id="shadowNote">Signals are observed only and evaluated against the next newer completed candle. This is not the trained ML model or broker execution.</div>
-  <div class="scroll"><table><thead><tr><th>Asset</th><th>Signal</th><th>Recorded at</th><th>Outcome</th><th>Directional return</th></tr></thead><tbody id="shadowRows"><tr><td colspan="5" class="empty">Waiting for shadow observations…</td></tr></tbody></table></div>
- </section>
-</div>
-<p class="footer">Research feed: Yahoo Finance public chart endpoint (unofficial, may be delayed, limited or unavailable; not licensed exchange data). This agent uses deterministic quantitative rules, not a paid LLM. No profitability is implied. All positions are simulated, stored in the demo ledger and never sent to a broker. India exchange-traded currency derivatives are not included in this first autonomous demo engine.</p>
+<header class="head"><div class="brand">APEX<i>.</i></div><div class="status">MODEL-ONLY · DEMO EXECUTION</div></header>
+<section class="panel">
+ <div class="toolbar"><div><div class="hint">MODEL-SELECTED MARKET</div><div class="pair" id="pair">Waiting for model…</div></div><div class="hint" id="marketState">Loading model chart</div></div>
+ <canvas id="chart" width="1400" height="620" aria-label="Candlestick chart used by the autonomous demo model"></canvas>
+ <div class="hint" id="chartMeta">The model chooses the market. This chart follows its current selection automatically.</div>
+</section>
+<section class="panel">
+ <div class="hint">VIRTUAL DEMO FUNDS</div>
+ <div class="funding" style="margin-top:10px"><input id="fundAmount" type="number" min="1" max="100000000" step="1" value="5000" aria-label="Amount of virtual demo funds"><button id="fundButton">Confirm demo funds</button></div>
+ <div class="note" id="fundMessage">Enter an amount and confirm. This adds virtual funds only; no payment or real currency is involved.</div>
+</section>
 </main>
 <script>
-const $=id=>document.getElementById(id);let snapshot=null,selected='';
-const money=v=>'$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmt=(v,n=5)=>Number(v).toFixed(n);
+const $=id=>document.getElementById(id);let activeSymbol='',lastBars=[];
 function drawChart(bars){
- const canvas=$('chart'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
- if(!bars||bars.length<2){ctx.fillStyle='#93a4bb';ctx.font='16px sans-serif';ctx.fillText('Waiting for market data',24,40);return;}
- const values=bars.map(x=>Number(x.close)),all=bars.flatMap(x=>[Number(x.high),Number(x.low)]),min=Math.min(...all),max=Math.max(...all),pad=(max-min)*.12||.0001,lo=min-pad,hi=max+pad;
- const y=v=>20+(hi-v)/(hi-lo)*(h-45),step=(w-80)/(bars.length-1),body=Math.max(2,Math.min(8,step*.62));
- ctx.strokeStyle='#223249';ctx.lineWidth=1;for(let i=0;i<5;i++){let gy=20+i*(h-45)/4;ctx.beginPath();ctx.moveTo(55,gy);ctx.lineTo(w-12,gy);ctx.stroke();ctx.fillStyle='#8394aa';ctx.font='11px sans-serif';ctx.fillText((hi-(hi-lo)*i/4).toFixed(5),5,gy+4);}
- bars.forEach((b,i)=>{const x=55+i*step,o=Number(b.open),cl=Number(b.close);ctx.strokeStyle=cl>=o?'#75e0bd':'#ff7d87';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x,y(Number(b.high)));ctx.lineTo(x,y(Number(b.low)));ctx.stroke();ctx.fillRect(x-body/2,Math.min(y(o),y(cl)),body,Math.max(1,Math.abs(y(o)-y(cl))));});
- function ema(period){let alpha=2/(period+1),v=values[0],out=[v];for(let i=1;i<values.length;i++){v=alpha*values[i]+(1-alpha)*v;out.push(v);}return out;}
- for(const [period,color] of [[9,'#f2c66d'],[21,'#8ba9ff']]){const series=ema(period);ctx.beginPath();series.forEach((v,i)=>{const x=55+i*step,yy=y(v);i?ctx.lineTo(x,yy):ctx.moveTo(x,yy)});ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.stroke();}
- ctx.fillStyle='#f2c66d';ctx.font='11px sans-serif';ctx.fillText('EMA 9',65,15);ctx.fillStyle='#8ba9ff';ctx.fillText('EMA 21',120,15);
+ const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
+ if(!bars||bars.length<2){ctx.fillStyle='#93a4bb';ctx.font='22px sans-serif';ctx.fillText('Waiting for fresh market candles',28,48);return;}
+ const vals=bars.map(x=>Number(x.close)),all=bars.flatMap(x=>[Number(x.high),Number(x.low)]),min=Math.min(...all),max=Math.max(...all),pad=(max-min)*.12||.0001,lo=min-pad,hi=max+pad;
+ const y=v=>24+(hi-v)/(hi-lo)*(h-58),step=(w-90)/(bars.length-1),body=Math.max(2,Math.min(10,step*.62));
+ ctx.strokeStyle='#223249';ctx.lineWidth=1;
+ for(let i=0;i<5;i++){const gy=24+i*(h-58)/4;ctx.beginPath();ctx.moveTo(68,gy);ctx.lineTo(w-12,gy);ctx.stroke();ctx.fillStyle='#8394aa';ctx.font='13px sans-serif';ctx.fillText((hi-(hi-lo)*i/4).toFixed(5),5,gy+4);}
+ bars.forEach((b,i)=>{const x=68+i*step,o=Number(b.open),cl=Number(b.close);ctx.strokeStyle=cl>=o?'#75e0bd':'#ff7d87';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x,y(Number(b.high)));ctx.lineTo(x,y(Number(b.low)));ctx.stroke();ctx.fillRect(x-body/2,Math.min(y(o),y(cl)),body,Math.max(1,Math.abs(y(o)-y(cl))));});
+ function ema(period){const alpha=2/(period+1);let v=vals[0];return vals.map((x,i)=>{if(i)v=alpha*x+(1-alpha)*v;return v;});}
+ for(const [p,color] of [[9,'#f2c66d'],[21,'#8ba9ff']]){const a=ema(p);ctx.beginPath();a.forEach((v,i)=>{const x=68+i*step,yy=y(v);i?ctx.lineTo(x,yy):ctx.moveTo(x,yy)});ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();}
+ ctx.font='14px sans-serif';ctx.fillStyle='#f2c66d';ctx.fillText('EMA 9',78,18);ctx.fillStyle='#8ba9ff';ctx.fillText('EMA 21',150,18);
 }
-async function loadChart(symbol){selected=symbol;try{const r=await fetch('/api/agent/chart?symbol='+encodeURIComponent(symbol));const d=await r.json();if(!r.ok)throw Error(d.error);drawChart(d.bars);const last=d.bars?.at(-1);$('chartMeta').textContent=last?('Last completed candle: '+new Date(last.timestamp).toLocaleString()+' · Close: '+fmt(last.close)+' · '+d.interval):'No completed candles yet';}catch(e){drawChart([]);$('chartMeta').textContent='Chart unavailable: '+e.message;}}
-function render(s){
- snapshot=s;const a=s.account||{};$('equity').textContent=money(a.equity);$('balance').textContent=money(a.balance);$('unrealized').textContent=money(a.unrealized_pnl);$('openCount').textContent=(a.open_trades||[]).length;
- $('unrealized').className=Number(a.unrealized_pnl)>=0?'mint':'red';$('agentState').textContent=s.state||'unknown';$('stateText').textContent=(s.state||'unknown').replaceAll('_',' ').toUpperCase();$('stateMessage').textContent=s.message||'';
- $('lastScan').textContent=s.last_scan?new Date(s.last_scan).toLocaleString():'Not scanned yet';$('source').textContent=s.source||'—';
- const assets=s.ranked_assets||[];$('assets').innerHTML=assets.length?assets.map((x,i)=>'<tr><td class="rank">#'+(i+1)+'</td><td>'+x.symbol+'</td><td>'+fmt(x.price)+'</td><td><span class="signal '+(x.signal==='sell'?'sell':x.signal==='neutral'?'neutral':'')+'">'+x.signal.toUpperCase()+'</span></td><td>'+fmt(x.rsi,1)+'</td><td>'+x.score+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No valid market data. Agent will retry automatically.</td></tr>';
- const positions=a.open_trades||[];$('positions').innerHTML=positions.length?positions.map(x=>'<tr><td>'+x.symbol+'<br><span class="'+(x.side==='buy'?'mint':'red')+'">'+x.side.toUpperCase()+'</span></td><td>'+fmt(x.entry_price)+'</td><td>'+fmt(x.stop_price)+'</td><td>'+fmt(x.target_price)+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">No open positions</td></tr>';
- const events=s.events||[];$('events').innerHTML=events.length?events.map(x=>'<div class="event"><small>'+new Date(x.time).toLocaleString()+' · '+x.type+'</small><p>'+x.message+'</p></div>').join(''):'<div class="empty">No events recorded yet.</div>';
- const sh=s.shadow||{}, rows=sh.records||[];
- $('shadowTotal').textContent=sh.total||0;$('shadowEvaluated').textContent=sh.evaluated||0;
- $('shadowAccuracy').textContent=sh.directional_accuracy_pct==null?'—':sh.directional_accuracy_pct+'%';
- $('shadowRecord').textContent=(sh.correct||0)+' / '+(sh.incorrect||0);
- $('shadowNote').textContent='Directional accuracy excludes neutral and flat outcomes. Next-observed-candle horizon · '+(sh.neutral||0)+' neutral signals · '+(sh.orders_created||0)+' orders created.';
- $('shadowRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+x.symbol+'</td><td>'+x.signal.toUpperCase()+'</td><td>'+new Date(x.signal_time).toLocaleString()+'</td><td>'+(x.outcome||'PENDING')+'</td><td>'+(x.return_pct==null?'—':Number(x.return_pct).toFixed(4)+'%')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Waiting for shadow observations…</td></tr>';
- const sel=$('symbol');const names=(s.watchlist||[]);if(!sel.options.length){sel.innerHTML=names.map(x=>'<option value="'+x+'">'+x+'</option>').join('');selected=names[0]||'';if(selected)loadChart(selected);}
- if(!selected&&names.length){selected=names[0];loadChart(selected);}
+async function loadChart(symbol){
+ if(!symbol)return;activeSymbol=symbol;$('pair').textContent=symbol;$('marketState').textContent='Loading model-selected chart…';
+ try{const r=await fetch('/api/agent/chart?symbol='+encodeURIComponent(symbol));const d=await r.json();if(!r.ok)throw Error(d.error||'Chart unavailable');lastBars=d.bars||[];drawChart(lastBars);const b=lastBars.at(-1);$('marketState').textContent=b?'Model chart active':'Waiting for candles';$('chartMeta').textContent=b?'Last completed candle: '+new Date(b.timestamp).toLocaleString()+' · Close: '+Number(b.close).toFixed(5)+' · '+d.interval:'No completed candles available for '+symbol+'.';}
+ catch(e){lastBars=[];drawChart([]);$('marketState').textContent='Market data unavailable';$('chartMeta').textContent=e.message;}
 }
-async function refresh(){try{const r=await fetch('/api/agent/status');const s=await r.json();if(!r.ok)throw Error(s.error);render(s);}catch(e){$('stateText').textContent='CONNECTION ERROR';$('stateMessage').textContent=e.message;}}
-$('symbol').addEventListener('change',e=>loadChart(e.target.value));
-$('fundButton').addEventListener('click',async()=>{const amount=$('fundAmount').value;$('fundButton').disabled=true;$('fundMessage').textContent='Adding virtual funds…';try{const r=await fetch('/api/agent/funds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount})});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');$('fundMessage').textContent='Added '+money(amount)+' in virtual demo funds.';refresh();}catch(e){$('fundMessage').textContent=e.message;}finally{$('fundButton').disabled=false;}});
-refresh();setInterval(refresh,10000);setInterval(()=>selected&&loadChart(selected),30000);
+function chooseModelMarket(s){
+ const account=s.account||{},positions=account.open_trades||[],ranked=s.ranked_assets||[];
+ const chosen=positions[0]?.symbol||ranked.find(x=>x.signal==='buy'||x.signal==='sell')?.symbol||ranked[0]?.symbol||s.watchlist?.[0]||'';
+ if(chosen&&chosen!==activeSymbol)loadChart(chosen);
+ if(!chosen){$('pair').textContent='Waiting for model';$('marketState').textContent=s.message||'No market selected';}
+}
+async function refresh(){try{const r=await fetch('/api/agent/status');const s=await r.json();if(!r.ok)throw Error(s.error||'Agent unavailable');chooseModelMarket(s);}catch(e){$('marketState').textContent=e.message;}}
+$('fundButton').addEventListener('click',async()=>{
+ const raw=$('fundAmount').value,amount=Number(raw);
+ if(!Number.isFinite(amount)||amount<=0||amount>100000000){$('fundMessage').textContent='Enter a valid amount between 1 and 100,000,000.';return;}
+ if(!window.confirm('Confirm adding '+amount.toLocaleString('en-US')+' virtual demo funds? No real money will move.'))return;
+ $('fundButton').disabled=true;$('fundMessage').textContent='Processing virtual-funds confirmation…';
+ try{const r=await fetch('/api/agent/funds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:String(amount)})});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');$('fundMessage').textContent='Confirmed. Virtual demo funds added successfully.';}
+ catch(e){$('fundMessage').textContent='Not added: '+e.message;}
+ finally{$('fundButton').disabled=false;}
+});
+refresh();setInterval(refresh,10000);setInterval(()=>activeSymbol&&loadChart(activeSymbol),30000);
 </script></body></html>
