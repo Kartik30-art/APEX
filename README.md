@@ -41,7 +41,7 @@ Run the walk-forward evaluation using the saved historical CSV:
 python -m apex.backtest_forex --csv data/forex/EURUSD_X_1h.csv --symbol EURUSD=X
 ```
 
-It retrains the model on an expanding history before each unseen test block and compares cost-adjusted results with simple baselines. The default friction assumptions are illustrative rather than broker quotes. See [the Step 2 validation guide](docs/FOREX_MODEL_VALIDATION.md). Reports are saved under `artifacts/forex-backtests/`.
+It retrains the model on an expanding history before each unseen test block and compares cost-adjusted results with simple baselines. The default friction assumptions are illustrative rather than broker quotes. See [the Step 2 validation guide](docs/FOREX_MODEL_VALIDATION.md) and [the observed Step 2 results](docs/FOREX_MODEL_VALIDATION_RESULTS.md). Reports are saved under `artifacts/forex-backtests/`.
 
 ## Web workbench and access protection
 
