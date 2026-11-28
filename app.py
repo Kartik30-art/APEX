@@ -289,9 +289,9 @@ class Handler(BaseHTTPRequestHandler):
             body=json.dumps({"trades":ledger.list_trades(limit=1000)},allow_nan=False).encode()
             self._send(200,"application/json",body)
         elif path == "/api/paper/summary":
-            from pathlib import Path
             from apex.paper import PaperLedger
-            ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+            from apex.storage import APEXStore
+            ledger=PaperLedger(APEXStore().path)
             body=json.dumps(ledger.summary(),allow_nan=False).encode()
             self._send(200,"application/json",body)
         elif path == "/api/integrations":
