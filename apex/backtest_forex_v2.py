@@ -59,7 +59,7 @@ def walk_forward_v2(
 
         history = candles[:train_end]
         v1_model, _ = train_model(history, epochs=epochs, patience=12)
-        v1_samples = [s for idx, s in all_samples_v1.items() if idx < train_end - 3]
+        v1_samples = [s for idx, s in all_samples_v1.items() if 60 <= idx < train_end - 3]
         v2_samples = [s for idx, s in all_samples_v2.items() if idx < train_end - 3]
         if len(v1_samples) < 100 or len(v2_samples) != len(v1_samples):
             raise ValueError("V1/V2 training samples are not aligned")
