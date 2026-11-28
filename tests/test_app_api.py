@@ -50,7 +50,7 @@ def test_dashboard_health_is_public_and_paper_api_requires_auth(apex_server):
     assert status == 401
 
 
-def test_paper_trade_create_list_close_flow(apex_server):
+def test_paper_trade_create_list_close_flow(apex_server, tmp_path):
     payload = {
         "instrument": "EURUSD", "side": "buy", "quantity": "1",
         "entry_price": "1.1000", "stop_price": "1.0900",
@@ -70,6 +70,14 @@ def test_paper_trade_create_list_close_flow(apex_server):
     status, summary = call(apex_server, "/api/paper/summary")
     assert status == 200 and summary["closed_trades"] == 1
     assert summary["realized_gross_pnl"] == "0.0100"
+
+    # The paper ledger must be part of the same database snapshot.
+    from apex.storage import APEXStore
+    import sqlite3
+    snapshot = tmp_path / "apex-snapshot.sqlite3"
+    APEXStore().backup(str(snapshot))
+    with sqlite3.connect(snapshot) as db:
+        assert db.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0] == 1
 
 
 def test_paper_trade_rejects_missing_confirmation(apex_server):
