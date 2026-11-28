@@ -34,7 +34,7 @@ def test_contract_backtest_includes_configured_fees():
     assert result.net_pnl_quote<result.gross_pnl_quote
 def test_contract_backtest_drawdown_marks_open_trade_before_recovery():
     start=datetime(2026,1,1,tzinfo=timezone.utc)
-    prices=((83,83,83),(83,82,82),(82,84,84))
+    prices=((83,83,83),(83,82,82),(82,82,84))
     bars=[]
     for i,(op,lo,cl) in enumerate(prices):
         o,l,c=Decimal(str(op)),Decimal(str(lo)),Decimal(str(cl))
