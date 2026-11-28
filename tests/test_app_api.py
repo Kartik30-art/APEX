@@ -96,9 +96,10 @@ def test_dashboard_is_read_only_autonomous_monitor(apex_server):
     request.add_header("Authorization", "Basic " + token)
     with urlopen(request, timeout=3) as response:
         page = response.read().decode()
-    assert "AI market operations" in page
-    assert "AI ASSET SCANNER" in page
-    assert "RULE-BASED" in page
-    assert "SHADOW SIGNAL TRACKER" in page
-    assert "DEMO POSITIONS" in page
-    assert "LIVE ORDERS OFF" in page
+    assert "MODEL-SELECTED MARKET" in page
+    assert "candlestick chart used by the autonomous demo model" in page
+    assert "Confirm demo funds" in page
+    assert "window.confirm" in page
+    assert "AI ASSET SCANNER" not in page
+    assert "SHADOW SIGNAL TRACKER" not in page
+    assert "DEMO POSITIONS" not in page
