@@ -64,3 +64,28 @@ def test_v2_classifiers_return_valid_probabilities_and_save_artifacts(tmp_path):
     assert payload["research_only"] is True
     assert payload["trading_authorized"] is False
     assert payload["format_version"] == 2
+
+def test_v2_outer_walk_forward_compares_models_and_exports_artifacts(tmp_path):
+    from apex.backtest_forex_v2 import walk_forward_v2
+
+    rows = candles(850)
+    report = walk_forward_v2(
+        rows,
+        initial_train_bars=600,
+        test_bars=100,
+        max_folds=2,
+        epochs=15,
+        trees=5,
+        model_dir=tmp_path,
+        symbol="EURUSD=X",
+    )
+    assert report["status"] == "RESEARCH_ONLY"
+    assert report["trading_authorized"] is False
+    assert len(report["folds"]) == 2
+    assert set(report["aggregate_strategies"]) >= {
+        "v1_logistic", "v2_gaussian_nb", "v2_random_forest",
+        "v2_gaussian_nb_double_cost_stress",
+        "v2_random_forest_double_cost_stress",
+    }
+    assert (tmp_path / "EURUSD_X_v2_gaussian_nb.json").exists()
+    assert (tmp_path / "EURUSD_X_v2_random_forest.json").exists()
