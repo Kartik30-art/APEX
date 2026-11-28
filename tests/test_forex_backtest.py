@@ -54,6 +54,7 @@ def test_walk_forward_is_chronological_and_research_only():
         "completed-candle signal"
     )
     assert "ml_model_double_cost_stress" in report["aggregate_strategies"]
+    assert "ema_8_21_trend" in report["aggregate_strategies"]
 
 
 def test_zero_signal_baseline_has_no_trades():
