@@ -283,9 +283,9 @@ class Handler(BaseHTTPRequestHandler):
             body=json.dumps(STREAM.status() if STREAM else {"state":"stopped","message":"stream not started","latest":{}},allow_nan=False).encode()
             self._send(200,"application/json",body)
         elif path == "/api/paper/trades":
-            from pathlib import Path
             from apex.paper import PaperLedger
-            ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+            from apex.storage import APEXStore
+            ledger=PaperLedger(APEXStore().path)
             body=json.dumps({"trades":ledger.list_trades(limit=1000)},allow_nan=False).encode()
             self._send(200,"application/json",body)
         elif path == "/api/paper/summary":
@@ -317,8 +317,8 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(payload,dict):
                 raise ValueError("JSON request body must be an object")
             if path == "/api/paper/trades":
-                from pathlib import Path
                 from apex.paper import PaperLedger
+                from apex.storage import APEXStore
                 from apex.models import TradeIntent
                 from datetime import timezone
                 if payload.get("paper_mode_enabled") is not True or payload.get("user_confirmed") is not True:
@@ -340,13 +340,13 @@ class Handler(BaseHTTPRequestHandler):
                 if (side=="buy" and stop_price>=entry_price) or (side=="sell" and stop_price<=entry_price):
                     raise ValueError("stop must be below entry for buys and above entry for sells")
                 intent=TradeIntent(instrument,side,quantity,entry_price,stop_price,timestamp,strategy_id)
-                ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+                ledger=PaperLedger(APEXStore().path)
                 trade_id=ledger.record_approved_intent(intent,client_id=client_id,user_confirmed=True,
                     paper_mode_enabled=True,notes=str(payload.get("notes",""))[:1000])
                 result={"trade_id":trade_id,"client_id":client_id,"status":"open","mode":"paper"}
             elif path.startswith("/api/paper/trades/") and path.endswith("/close"):
-                from pathlib import Path
                 from apex.paper import PaperLedger
+                from apex.storage import APEXStore
                 if payload.get("user_confirmed") is not True:
                     raise PermissionError("explicit confirmation is required to close a paper trade")
                 trade_id=int(path.split("/")[-2])
