@@ -32,3 +32,14 @@ def test_contract_backtest_includes_configured_fees():
     result=run_contract_backtest(bars,OneLong(),NSE_INR_FUTURES["USDINR"],fees=FeeSchedule(brokerage_per_order=Decimal("10")))
     assert result.estimated_fees_quote==Decimal("20")
     assert result.net_pnl_quote<result.gross_pnl_quote
+def test_contract_backtest_drawdown_marks_open_trade_before_recovery():
+    start=datetime(2026,1,1,tzinfo=timezone.utc)
+    prices=((83,83,83),(83,82,82),(82,84,84))
+    bars=[]
+    for i,(op,lo,cl) in enumerate(prices):
+        o,l,c=Decimal(str(op)),Decimal(str(lo)),Decimal(str(cl))
+        bars.append(Candle(start+timedelta(hours=i),o,max(o,c),l,c,Decimal("1")))
+    result=run_contract_backtest(bars,OneLong(),NSE_INR_FUTURES["USDINR"])
+    assert result.net_pnl_quote > 0
+    assert result.max_drawdown_fraction > 0
+    assert "intrabar extremes are not modeled" in result.assumptions["drawdown"]
