@@ -1,0 +1,62 @@
+name: Train APEX Forex models
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apex/forex_data.py"
+      - "apex/forex_ml.py"
+      - "apex/train_forex.py"
+      - ".github/workflows/train-forex.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    name: Train \${{ matrix.slug }} research model
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - symbol: EURUSD=X
+            slug: eurusd
+          - symbol: GBPUSD=X
+            slug: gbpusd
+          - symbol: AUDUSD=X
+            slug: audusd
+          - symbol: NZDUSD=X
+            slug: nzdusd
+    steps:
+      - name: Check out APEX
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install APEX without optional cloud integrations
+        run: python -m pip install --no-deps -e .
+
+      - name: Download historical data and train model
+        run: >-
+          python -m apex.train_forex
+          --symbol '\${{ matrix.symbol }}'
+          --period 2y
+          --interval 1h
+          --data-dir data/forex
+          --model-dir artifacts/forex-models
+
+      - name: Upload dataset, model and holdout report
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-\${{ matrix.slug }}-model-\${{ github.run_id }}
+          path: |
+            data/forex/*
+            artifacts/forex-models/*
+          if-no-files-found: error
+          retention-days: 30
