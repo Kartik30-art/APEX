@@ -6,7 +6,6 @@ It mirrors APEX autonomous paper positions to a DEMO MT5 account only.
 from __future__ import annotations
 
 import getpass
-import json
 import os
 import sys
 import time
@@ -74,6 +73,18 @@ def check_demo_account():
     return info
 
 
+def supported_market_filling(spec):
+    """Choose a market-order filling policy from the broker's supported flags."""
+    flags = int(spec.filling_mode)
+    if flags & getattr(mt5, "SYMBOL_FILLING_FOK", 1):
+        return mt5.ORDER_FILLING_FOK
+    if flags & getattr(mt5, "SYMBOL_FILLING_IOC", 2):
+        return mt5.ORDER_FILLING_IOC
+    raise RuntimeError(
+        f"Broker does not advertise FOK/IOC market filling for {spec.name}; refusing order"
+    )
+
+
 def send_open(trade: dict):
     pair = trade["symbol"]
     symbol = mt5_symbol(pair)
@@ -81,7 +92,9 @@ def send_open(trade: dict):
     spec = mt5.symbol_info(symbol)
     if tick is None or spec is None:
         raise RuntimeError(f"No live broker quote/specification for {symbol}")
-    side = trade["side"].lower()
+    side = str(trade["side"]).lower()
+    if side not in {"buy", "sell"}:
+        raise RuntimeError(f"Unsupported APEX trade side: {side!r}")
     expected = float(trade["entry_price"])
     market = tick.ask if side == "buy" else tick.bid
     if expected <= 0 or abs(market - expected) / expected > MAX_PRICE_DEVIATION:
@@ -91,11 +104,19 @@ def send_open(trade: dict):
         raise RuntimeError(f"Invalid BUY stop/target relative to broker quote for {symbol}")
     if side == "sell" and not (tp < market < sl):
         raise RuntimeError(f"Invalid SELL stop/target relative to broker quote for {symbol}")
-    volume = max(float(spec.volume_min), min(MAX_VOLUME, float(spec.volume_max)))
+    # Never round a requested volume upward: stay at or below the hard cap.
+    minimum, maximum = float(spec.volume_min), float(spec.volume_max)
     step = float(spec.volume_step or 0.01)
-    volume = round(round(volume / step) * step, 8)
-    if volume > MAX_VOLUME + 1e-9:
-        raise RuntimeError(f"Broker minimum volume {volume} exceeds bridge safety cap {MAX_VOLUME}")
+    if minimum <= 0 or step <= 0 or minimum > MAX_VOLUME or maximum < minimum:
+        raise RuntimeError(
+            f"Broker volume constraints are incompatible with {MAX_VOLUME} lot cap: "
+            f"min={minimum}, max={maximum}, step={step}"
+        )
+    ceiling = min(MAX_VOLUME, maximum)
+    steps = int((ceiling - minimum + 1e-10) // step)
+    volume = round(minimum + steps * step, 8)
+    if volume < minimum - 1e-9 or volume > MAX_VOLUME + 1e-9:
+        raise RuntimeError(f"Safe volume cannot be represented under {MAX_VOLUME} lot cap")
     request = {
         "action": mt5.TRADE_ACTION_DEAL,
         "symbol": symbol,
@@ -108,7 +129,7 @@ def send_open(trade: dict):
         "magic": MAGIC,
         "comment": "APEX:" + str(trade["id"])[:20],
         "type_time": mt5.ORDER_TIME_GTC,
-        "type_filling": spec.filling_mode,
+        "type_filling": supported_market_filling(spec),
     }
     result = mt5.order_send(request)
     if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
@@ -132,7 +153,7 @@ def close_position(position):
         "magic": MAGIC,
         "comment": "APEX DEMO close",
         "type_time": mt5.ORDER_TIME_GTC,
-        "type_filling": mt5.symbol_info(position.symbol).filling_mode,
+        "type_filling": supported_market_filling(mt5.symbol_info(position.symbol)),
     }
     result = mt5.order_send(request)
     if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
