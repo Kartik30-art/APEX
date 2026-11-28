@@ -198,8 +198,10 @@ class AutonomousDemoAgent:
         with self._connect() as db:
             db.execute("UPDATE agent_trades SET status='closed',exit_price=?,closed_at=?,pnl=? WHERE id=? AND status='open'",
                        (str(price), _now().isoformat(), str(pnl), trade["id"]))
-            db.execute("UPDATE agent_account SET balance=CAST(balance AS REAL)+?,updated_at=? WHERE id=1",
-                       (float(pnl), _now().isoformat()))
+            row = db.execute("SELECT balance FROM agent_account WHERE id=1").fetchone()
+            new_balance = Decimal(row["balance"]) + pnl
+            db.execute("UPDATE agent_account SET balance=?,updated_at=? WHERE id=1",
+                       (str(new_balance), _now().isoformat()))
         self._event("trade_closed", f"{trade['symbol']} {trade['side']} closed at {price:.6f}: {reason}", pnl=str(pnl))
 
     def _manage_open(self, symbol: str, bars: list[dict]):
@@ -308,8 +310,10 @@ class AutonomousDemoAgent:
         if not value.is_finite() or value <= 0 or value > Decimal("100000000"):
             raise ValueError("Demo-fund request must be between 0 and 100,000,000")
         with self._connect() as db:
-            db.execute("UPDATE agent_account SET balance=CAST(balance AS REAL)+?,updated_at=? WHERE id=1",
-                       (float(value), _now().isoformat()))
+            row = db.execute("SELECT balance FROM agent_account WHERE id=1").fetchone()
+            new_balance = Decimal(row["balance"]) + value
+            db.execute("UPDATE agent_account SET balance=?,updated_at=? WHERE id=1",
+                       (str(new_balance), _now().isoformat()))
         self._event("demo_funds", f"Added {value} virtual demo funds; no real money was moved.")
         return self._account()
 
