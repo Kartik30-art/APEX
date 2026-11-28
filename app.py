@@ -79,6 +79,12 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 </div>
 <label><input id="paperConfirm" type="checkbox"> I confirm this is a simulated paper-trade journal entry, not a live order.</label>
 <button id="paperCreate">Record paper trade</button>
+<div class="fields">
+<label>Close trade ID<input id="paperCloseId" type="number" min="1" step="1"></label>
+<label>Exit price<input id="paperClosePrice" type="number" min="0.000001" step="any"></label>
+</div>
+<label><input id="paperCloseConfirm" type="checkbox"> I confirm closing this simulated paper-trade record.</label>
+<button id="paperClose">Close paper trade</button>
 <button id="paperRefresh">Refresh journal</button>
 <div id="paperSummary" class="muted" style="margin-top:12px"></div>
 <div id="paperTrades" class="muted" style="white-space:pre-wrap;margin-top:8px"></div>
@@ -124,6 +130,15 @@ async function refreshPaperLedger(){
  }catch(e){summary.textContent='Paper journal: '+e.message;}
 }
 document.getElementById('paperRefresh').addEventListener('click',refreshPaperLedger);
+document.getElementById('paperClose').addEventListener('click',async()=>{
+ const out=document.getElementById('paperTrades'),id=document.getElementById('paperCloseId').value;
+ if(!id||!document.getElementById('paperCloseConfirm').checked){out.textContent='Enter a trade ID and tick the explicit close confirmation.';return;}
+ try{const r=await fetch('/api/paper/trades/'+encodeURIComponent(id)+'/close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({exit_price:document.getElementById('paperClosePrice').value,user_confirmed:true})});
+ const d=await r.json();if(!r.ok)throw Error(d.error||'Could not close paper trade');out.textContent=JSON.stringify(d,null,2);
+ document.getElementById('paperCloseConfirm').checked=false;await refreshPaperLedger();
+ }catch(e){out.textContent='Error: '+e.message;}
+});
+
 document.getElementById('paperCreate').addEventListener('click',async()=>{
  const out=document.getElementById('paperTrades');
  if(!document.getElementById('paperConfirm').checked){out.textContent='Tick the explicit paper-only confirmation first.';return;}
@@ -201,6 +216,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         self.end_headers()
         self.wfile.write(body)
 
@@ -226,6 +245,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("WWW-Authenticate", 'Basic realm="APEX Personal Workbench", charset="UTF-8"')
             self.send_header("Content-Length", "0")
             self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
             self.end_headers()
             return False
         return True
@@ -309,9 +331,15 @@ class Handler(BaseHTTPRequestHandler):
                 timestamp=datetime.fromisoformat(str(payload.get("timestamp") or datetime.now(timezone.utc).isoformat()).replace("Z","+00:00"))
                 if timestamp.tzinfo is None or timestamp.utcoffset() is None:
                     raise ValueError("timestamp must include a timezone")
-                intent=TradeIntent(instrument,str(payload.get("side","")),
-                    Decimal(str(payload.get("quantity"))),Decimal(str(payload.get("entry_price"))),
-                    Decimal(str(payload.get("stop_price"))),timestamp,strategy_id)
+                quantity=Decimal(str(payload.get("quantity")))
+                entry_price=Decimal(str(payload.get("entry_price")))
+                stop_price=Decimal(str(payload.get("stop_price")))
+                if not all(x.is_finite() and x>0 for x in (quantity,entry_price,stop_price)):
+                    raise ValueError("quantity, entry and stop must be finite positive numbers")
+                side=str(payload.get("side",""))
+                if (side=="buy" and stop_price>=entry_price) or (side=="sell" and stop_price<=entry_price):
+                    raise ValueError("stop must be below entry for buys and above entry for sells")
+                intent=TradeIntent(instrument,side,quantity,entry_price,stop_price,timestamp,strategy_id)
                 ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
                 trade_id=ledger.record_approved_intent(intent,client_id=client_id,user_confirmed=True,
                     paper_mode_enabled=True,notes=str(payload.get("notes",""))[:1000])
@@ -402,7 +430,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body=json.dumps(result,allow_nan=False).encode()
             self._send(200,"application/json",body)
-        except (ValueError, KeyError, TypeError, InvalidOperation, ArithmeticError) as exc:
+        except (ValueError, KeyError, TypeError, InvalidOperation, ArithmeticError, PermissionError) as exc:
             self._send(400,"application/json",json.dumps({"error":str(exc)}).encode())
         except Exception as exc:
             # Keep provider credentials and upstream response bodies out of logs/UI.
