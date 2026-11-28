@@ -5,6 +5,7 @@ contract units, quotation units, tick slippage and explicit fee inputs.
 No margin/financing/liquidation model is inferred.
 """
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Sequence
 
@@ -81,9 +82,10 @@ def run_contract_backtest(
         )
         # Mark open risk at every candle close so drawdown is not measured
         # only after a trade has already recovered and closed.
+        trade_entry_time = datetime.fromisoformat(trade.entry_time)
+        trade_exit_time = datetime.fromisoformat(trade.exit_time)
         for bar in candles:
-            stamp = bar.timestamp.isoformat()
-            if trade.entry_time <= stamp <= trade.exit_time:
+            if trade_entry_time <= bar.timestamp <= trade_exit_time:
                 marked_exit = (
                     max(spec.tick_size, bar.close - slip)
                     if side == "buy" else bar.close + slip
