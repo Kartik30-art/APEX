@@ -106,7 +106,7 @@ def send_open(trade: dict):
         "tp": round(tp, spec.digits),
         "deviation": 20,
         "magic": MAGIC,
-        "comment": "APEX DEMO mirror",
+        "comment": "APEX:" + str(trade["id"])[:20],
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": spec.filling_mode,
     }
@@ -174,15 +174,14 @@ def main():
                         print(f"OPEN REJECTED {trade.get('symbol')}: {exc}")
             # If APEX has closed a mirrored position, close only this bridge's MT5 position.
             closed_ids = {str(t["id"]) for t in acct.get("closed_trades", [])}
-            if closed_ids:
-                for pos in owned_positions():
-                    # MT5 comment carries APEX trade ID only in later extension; current bridge
-                    # permits one position at a time, and closes it when APEX has no open trade.
-                    if not apex_open:
-                        try:
-                            close_position(pos)
-                        except Exception as exc:
-                            print(f"CLOSE FAILED {pos.ticket}: {exc}")
+            for pos in owned_positions():
+                # The order comment stores the APEX trade ID for exact close matching.
+                matched = next((tid for tid in closed_ids if tid[:20] in (pos.comment or "")), None)
+                if matched:
+                    try:
+                        close_position(pos)
+                    except Exception as exc:
+                        print(f"CLOSE FAILED {pos.ticket}: {exc}")
             time.sleep(POLL_SECONDS)
     except KeyboardInterrupt:
         print("Bridge stopped by user. Existing MT5 demo positions are left protected by broker SL/TP.")
