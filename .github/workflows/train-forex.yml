@@ -11,6 +11,9 @@ on:
       - "apex/backtest_forex.py"
       - "apex/forex_models_v2.py"
       - "apex/backtest_forex_v2.py"
+      - "apex/backtest_forex_v3.py"
+      - "tests/test_forex_models_v3.py"
+      - "docs/FOREX_MODEL_V3.md"
       - ".github/workflows/train-forex.yml"
   workflow_dispatch:
 
@@ -29,15 +32,19 @@ jobs:
           - symbol: EURUSD=X
             slug: eurusd
             csv: EURUSD_X_1h.csv
+            daily_csv: EURUSD_X_1d.csv
           - symbol: GBPUSD=X
             slug: gbpusd
             csv: GBPUSD_X_1h.csv
+            daily_csv: GBPUSD_X_1d.csv
           - symbol: AUDUSD=X
             slug: audusd
             csv: AUDUSD_X_1h.csv
+            daily_csv: AUDUSD_X_1d.csv
           - symbol: NZDUSD=X
             slug: nzdusd
             csv: NZDUSD_X_1h.csv
+            daily_csv: NZDUSD_X_1d.csv
     steps:
       - name: Check out APEX
         uses: actions/checkout@v4
@@ -90,6 +97,32 @@ jobs:
           --slippage-bps-per-side 0.2
           --report-dir artifacts/forex-v2-backtests
 
+      - name: Download ten-year daily history for the V3 date-locked experiment
+        run: >-
+          python -m apex.train_forex
+          --symbol ${{ matrix.symbol }}
+          --period 10y
+          --interval 1d
+          --data-dir data/forex-v3
+          --model-dir artifacts/forex-v3-source-models
+          --download-only
+
+      - name: Run V3 calibration on the older daily holdout
+        run: >-
+          python -m apex.backtest_forex_v3
+          --csv data/forex-v3/${{ matrix.daily_csv }}
+          --symbol ${{ matrix.symbol }}
+          --initial-train-bars 750
+          --test-bars 250
+          --max-folds 5
+          --locked-test-end 2024-10-01
+          --min-validation-trades 10
+          --trees 13
+          --spread-bps-per-side 0.8
+          --commission-bps-per-side 0.0
+          --slippage-bps-per-side 0.2
+          --report-dir artifacts/forex-v3-backtests
+
       - name: Upload dataset, model and validation report
         uses: actions/upload-artifact@v4
         with:
@@ -99,5 +132,8 @@ jobs:
             artifacts/forex-models/*
             artifacts/forex-backtests/*
             artifacts/forex-v2-backtests/*
+            data/forex-v3/*
+            artifacts/forex-v3-source-models/*
+            artifacts/forex-v3-backtests/*
           if-no-files-found: error
           retention-days: 30
