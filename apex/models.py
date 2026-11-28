@@ -44,5 +44,9 @@ class TradeIntent:
     strategy_id: str
     def __post_init__(self):
         if self.side not in {"buy", "sell"}: raise ValueError("side must be buy or sell")
+        if not all(x.is_finite() for x in (self.quantity, self.entry_price, self.stop_price)):
+            raise ValueError("quantity and prices must be finite")
         if min(self.quantity, self.entry_price, self.stop_price) <= 0: raise ValueError("quantity and prices must be positive")
+        if self.timestamp.tzinfo is None or self.timestamp.utcoffset() is None:
+            raise ValueError("timestamp must be timezone-aware")
         if not self.strategy_id.strip(): raise ValueError("strategy_id is required")
