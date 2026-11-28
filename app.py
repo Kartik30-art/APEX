@@ -67,6 +67,22 @@ footer{border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:v
 <button id="calcContract">Calculate contract P&amp;L</button>
 <button id="runContractBacktest">Backtest uploaded CSV with contract specs</button><div id="contractResult" class="muted" style="white-space:pre-wrap;margin-top:12px"></div>
 </section>
+<section class="work"><h2>Paper trade journal</h2>
+<p class="muted">Simulated records only. Each entry and close requires the confirmation checkbox. No broker connection or real order is created.</p>
+<div class="fields">
+<label>Instrument<input id="paperInstrument" type="text" value="EURUSD"></label>
+<label>Side<select id="paperSide"><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
+<label>Quantity<input id="paperQuantity" type="number" min="0.000001" step="any" value="1"></label>
+<label>Entry price<input id="paperEntry" type="number" min="0.000001" step="any" value="1.1"></label>
+<label>Stop price<input id="paperStop" type="number" min="0.000001" step="any" value="1.09"></label>
+<label>Strategy ID<input id="paperStrategy" type="text" value="manual"></label>
+</div>
+<label><input id="paperConfirm" type="checkbox"> I confirm this is a simulated paper-trade journal entry, not a live order.</label>
+<button id="paperCreate">Record paper trade</button>
+<button id="paperRefresh">Refresh journal</button>
+<div id="paperSummary" class="muted" style="margin-top:12px"></div>
+<div id="paperTrades" class="muted" style="white-space:pre-wrap;margin-top:8px"></div>
+</section>
 <section class="work"><h2>Connected research providers</h2>
 <p class="muted">Keys are configured privately in Render Environment. API calls may incur charges. No provider is contacted until you click its action.</p>
 <div id="providers" class="muted">Checking configured providers…</div>
@@ -98,6 +114,29 @@ function parseCSV(text){
  for(const k of ['timestamp','open','high','low','close'])if(!headers.includes(k))throw Error('Missing column: '+k);
  return lines.slice(1).filter(Boolean).map((line,i)=>{const cols=line.split(',');const row={};headers.forEach((h,j)=>row[h]=cols[j]?.trim());return {timestamp:row.timestamp,open:row.open,high:row.high,low:row.low,close:row.close,volume:row.volume||'0'};});
 }
+async function refreshPaperLedger(){
+ const summary=document.getElementById('paperSummary'),list=document.getElementById('paperTrades');
+ try{
+  const [a,b]=await Promise.all([fetch('/api/paper/summary'),fetch('/api/paper/trades')]);
+  const x=await a.json(),y=await b.json();if(!a.ok||!b.ok)throw Error(x.error||y.error||'Could not load paper journal');
+  summary.textContent='Open: '+x.open_trades+' · Closed: '+x.closed_trades+' · Realized gross P&L: '+x.realized_gross_pnl+' (quote currency; costs excluded)';
+  list.textContent=y.trades.length?JSON.stringify(y.trades,null,2):'No paper trades recorded yet.';
+ }catch(e){summary.textContent='Paper journal: '+e.message;}
+}
+document.getElementById('paperRefresh').addEventListener('click',refreshPaperLedger);
+document.getElementById('paperCreate').addEventListener('click',async()=>{
+ const out=document.getElementById('paperTrades');
+ if(!document.getElementById('paperConfirm').checked){out.textContent='Tick the explicit paper-only confirmation first.';return;}
+ const payload={instrument:document.getElementById('paperInstrument').value.trim(),side:document.getElementById('paperSide').value,
+ quantity:document.getElementById('paperQuantity').value,entry_price:document.getElementById('paperEntry').value,
+ stop_price:document.getElementById('paperStop').value,strategy_id:document.getElementById('paperStrategy').value.trim(),
+ client_id:crypto.randomUUID(),paper_mode_enabled:true,user_confirmed:true};
+ try{const r=await fetch('/api/paper/trades',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+ const d=await r.json();if(!r.ok)throw Error(d.error||'Could not record paper trade');out.textContent=JSON.stringify(d,null,2);
+ document.getElementById('paperConfirm').checked=false;await refreshPaperLedger();
+ }catch(e){out.textContent='Error: '+e.message;}
+});
+refreshPaperLedger();
 async function loadProviders(){try{const r=await fetch('/api/integrations');const d=await r.json();document.getElementById('providers').textContent='AI configured: '+(d.ai.configured.join(', ')||'none')+' · FX data: '+(d.forex_configured?'configured':'not configured')+' · India data: '+(d.india_configured?'configured':'not configured')+' · Database: '+d.database+' · Off-site backup: '+(d.backup_configured?'configured':'not configured')+' · Live orders: disabled';}catch(e){document.getElementById('providers').textContent='Could not read integration status';}}
 loadProviders();
 document.getElementById('runBackup').addEventListener('click',async()=>{const out=document.getElementById('backupResult');out.textContent='Creating backup and uploading…';try{const r=await fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const d=await r.json();if(!r.ok)throw Error(d.error||'Backup failed');out.textContent=JSON.stringify(d,null,2);}catch(e){out.textContent='Error: '+e.message;}});
@@ -221,6 +260,18 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/data/forex/stream/latest":
             body=json.dumps(STREAM.status() if STREAM else {"state":"stopped","message":"stream not started","latest":{}},allow_nan=False).encode()
             self._send(200,"application/json",body)
+        elif path == "/api/paper/trades":
+            from pathlib import Path
+            from apex.paper import PaperLedger
+            ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+            body=json.dumps({"trades":ledger.list_trades(limit=1000)},allow_nan=False).encode()
+            self._send(200,"application/json",body)
+        elif path == "/api/paper/summary":
+            from pathlib import Path
+            from apex.paper import PaperLedger
+            ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+            body=json.dumps(ledger.summary(),allow_nan=False).encode()
+            self._send(200,"application/json",body)
         elif path == "/api/integrations":
             from apex.ai_research import AIResearch
             body = json.dumps({"ai":{"configured":AIResearch().configured()},
@@ -241,7 +292,40 @@ class Handler(BaseHTTPRequestHandler):
             if length <= 0 or length > 15_000_000:
                 raise ValueError("Request must be between 1 byte and 15 MB")
             payload = json.loads(self.rfile.read(length))
-            if path == "/api/backtest":
+            if not isinstance(payload,dict):
+                raise ValueError("JSON request body must be an object")
+            if path == "/api/paper/trades":
+                from pathlib import Path
+                from apex.paper import PaperLedger
+                from apex.models import TradeIntent
+                from datetime import timezone
+                if payload.get("paper_mode_enabled") is not True or payload.get("user_confirmed") is not True:
+                    raise PermissionError("explicit paper-only confirmation is required")
+                instrument=str(payload.get("instrument","")).strip().upper()
+                strategy_id=str(payload.get("strategy_id","")).strip()
+                client_id=str(payload.get("client_id","")).strip()
+                if not instrument or len(instrument)>32 or not strategy_id or len(strategy_id)>80 or not client_id or len(client_id)>100:
+                    raise ValueError("instrument, strategy_id and client_id are required and must be short")
+                timestamp=datetime.fromisoformat(str(payload.get("timestamp") or datetime.now(timezone.utc).isoformat()).replace("Z","+00:00"))
+                if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                    raise ValueError("timestamp must include a timezone")
+                intent=TradeIntent(instrument,str(payload.get("side","")),
+                    Decimal(str(payload.get("quantity"))),Decimal(str(payload.get("entry_price"))),
+                    Decimal(str(payload.get("stop_price"))),timestamp,strategy_id)
+                ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+                trade_id=ledger.record_approved_intent(intent,client_id=client_id,user_confirmed=True,
+                    paper_mode_enabled=True,notes=str(payload.get("notes",""))[:1000])
+                result={"trade_id":trade_id,"client_id":client_id,"status":"open","mode":"paper"}
+            elif path.startswith("/api/paper/trades/") and path.endswith("/close"):
+                from pathlib import Path
+                from apex.paper import PaperLedger
+                if payload.get("user_confirmed") is not True:
+                    raise PermissionError("explicit confirmation is required to close a paper trade")
+                trade_id=int(path.split("/")[-2])
+                ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+                ledger.close_trade(trade_id,exit_price=Decimal(str(payload.get("exit_price"))),user_confirmed=True)
+                result={"trade_id":trade_id,"status":"closed","mode":"paper"}
+            elif path == "/api/backtest":
                 result = _backtest(payload)
             elif path == "/api/data/forex/stream/start":
                 global STREAM
