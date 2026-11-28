@@ -7,7 +7,7 @@
 - Basic deterministic Risk Guardian (not contract-aware; research-only).
 - Append-only audit logger.
 - Minimal next-bar OHLC backtester with explicit fee/slippage assumptions.
-- SQLite paper journal with explicit confirmation and idempotent client IDs.
+- SQLite paper journal exposed in the authenticated dashboard, with explicit confirmation to create/close records and idempotent client IDs.
 - CSV backtest web workbench and automated tests.
 
 ## Remaining before credible paper research
