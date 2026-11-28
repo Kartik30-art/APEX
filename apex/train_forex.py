@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-move-bps", type=float, default=1.5)
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--csv", help="Use an existing validated CSV instead of downloading")
+    parser.add_argument("--download-only", action="store_true", help="Download and validate history without fitting a model")
     return parser
 
 
@@ -63,6 +64,10 @@ def main(argv: list[str] | None = None) -> int:
             interval=args.interval,
             period=args.period,
         )
+
+    if args.download_only:
+        print(json.dumps({"dataset": dataset_manifest, "csv_file": str(csv_path)}, indent=2))
+        return 0
 
     model_path = model_dir / f"{symbol_name}_{args.interval}.json"
     model, metrics = train_model(
