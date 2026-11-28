@@ -7,7 +7,7 @@ Step 2 evaluates models on multiple forward-only windows. For each fold, APEX tr
 The simulator reports:
 - Out-of-sample sell/hold/buy classification accuracy, balanced accuracy, macro-F1 and confusion matrix.
 - Next-bar-open simulated trades, win rate, profit factor, ending equity and drawdown.
-- An always-flat baseline, a training-majority-class baseline and buy-and-hold.
+- Always-flat, training-majority-class, buy-and-hold and EMA 8/21 trend baselines.
 - A doubled-cost stress test to expose sensitivity to spread/slippage assumptions.
 
 ## Run it
