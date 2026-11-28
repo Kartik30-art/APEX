@@ -21,10 +21,7 @@ APEX is a personal-use, demo-only autonomous Forex research and paper-trading wo
 
 The dashboard is protected by HTTP Basic authentication. Configure a strong, unique `APEX_ACCESS_PASSWORD` environment variable in the Render service before accessing it. The username is `apex`. If the variable is missing, the app remains locked and returns HTTP 503. Use HTTPS (Render's public URL provides TLS); do not commit the password or send it in chat. The password is not created automatically.
 
-The Render service is intended for personal research access. Upload a CSV containing:
-`timestamp,open,high,low,close` and optional `volume`.
-
-Use timezone-aware ISO timestamps, e.g. `2026-01-01T09:15:00+05:30`. Rows must be strictly chronological and OHLC values valid. The workbench caps uploads at 100,000 candles and requests at 15 MB.
+The Render service is intended for personal demo access. The dashboard itself is read-only apart from requesting additional virtual demo funds. The autonomous scanner starts when the dashboard requests agent status. It refreshes its scan every five minutes and the browser refreshes account and event status every ten seconds. Historical CSV backtesting remains available through the backend API and local CLI, not as a dashboard control.
 
 ## Run locally
 
