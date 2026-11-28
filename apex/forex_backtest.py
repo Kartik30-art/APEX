@@ -301,6 +301,11 @@ def walk_forward_ml_backtest(
         }
         majority_label = max(CLASSES, key=lambda label: train_support[label])
         model_report = _classification_report(test_samples, predictions)
+        majority_classifier = _classification_report(
+            test_samples,
+            {sample.source_index: majority_label for sample in test_samples},
+        )
+        model_report["training_majority_classifier_accuracy"] = majority_classifier["accuracy"]
 
         model_result = _trade_simulation(
             candles, model_signals, start_index=train_end, end_index=test_end,
@@ -374,7 +379,7 @@ def walk_forward_ml_backtest(
     )
     weighted_baseline = (
         sum(
-            fold["classification"]["majority_class_accuracy"] * fold["classification"]["rows"]
+            fold["classification"]["training_majority_classifier_accuracy"] * fold["classification"]["rows"]
             for fold in folds
         ) / total_classification_rows
         if total_classification_rows else 0.0
