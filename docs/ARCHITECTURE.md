@@ -21,7 +21,7 @@ ML model outputs are untrusted research predictions. They cannot change risk set
 
 ## Data flow
 
-Historical public candles -> OHLCV validation -> feature and label generation -> chronological train/validation/holdout split -> model training with validation early stopping -> untouched holdout report -> later cost-aware walk-forward evaluation.
+Historical public candles -> OHLCV validation -> feature and label generation -> chronological train/validation/holdout split -> model training with validation early stopping -> untouched holdout report -> repeated expanding-window retraining -> next-bar-open cost-aware backtesting -> baseline and stress comparisons.
 
 CSV upload -> timestamp/OHLCV parsing -> validation -> deterministic strategy -> next-bar simulation -> metrics and trade list.
 
