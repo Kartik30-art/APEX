@@ -1,9 +1,10 @@
 {
-  "mode": "research",
+  "mode": "demo_paper",
   "live_trading_enabled": false,
   "markets": {
     "global_forex": {"enabled": true, "execution_enabled": false, "timezone": "UTC"},
     "india_currency_derivatives": {"enabled": true, "execution_enabled": false, "timezone": "Asia/Kolkata"}
   },
+  "autonomous_agent": {"enabled": true, "market_data_source": "yahoo_public_chart_unofficial", "interval": "15m", "scan_interval_seconds": 300, "watchlist": ["EUR/USD", "GBP/USD", "AUD/USD", "NZD/USD"], "max_open_positions": 1, "risk_fraction_per_trade": 0.005, "reward_to_risk": 2.0},
   "risk": {"max_risk_fraction_per_trade": 0.005, "max_daily_loss_fraction": 0.02, "max_open_positions": 3, "max_spread_bps": 30, "max_quote_age_seconds": 15}
 }
