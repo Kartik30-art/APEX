@@ -13,6 +13,7 @@ dependencies = ["boto3>=1.34", "websockets>=12"]
 apex-train-forex = "apex.train_forex:main"
 apex-backtest-forex = "apex.backtest_forex:main"
 apex-backtest-forex-v2 = "apex.backtest_forex_v2:main"
+apex-backtest-forex-v3 = "apex.backtest_forex_v3:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]
