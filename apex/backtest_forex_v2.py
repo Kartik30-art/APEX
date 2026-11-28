@@ -18,6 +18,7 @@ from .forex_models_v2 import (
     features_at_v2,
     fit_gaussian_nb,
     fit_random_forest,
+    save_v2_model,
 )
 
 
@@ -31,6 +32,8 @@ def walk_forward_v2(
     costs: TradingCosts = TradingCosts(),
     epochs: int = 100,
     trees: int = 13,
+    model_dir: str | Path | None = None,
+    symbol: str = "EURUSD=X",
 ) -> dict:
     if initial_train_bars < 500 or test_bars < 100:
         raise ValueError("initial_train_bars must be >= 500 and test_bars >= 100")
@@ -51,6 +54,7 @@ def walk_forward_v2(
     folds = []
     train_end = initial_train_bars
     final_models = {}
+    final_model_train_bars = 0
 
     while train_end < len(candles) and len(folds) < max_folds:
         test_end = min(train_end + test_bars, len(candles))
@@ -77,6 +81,7 @@ def walk_forward_v2(
             "v2_random_forest": forest_model,
         }
         final_models = models
+        final_model_train_bars = train_end
 
         # Validation is reported for diagnosis only. Outer forward blocks remain
         # untouched and no candidate selection is performed on them.
@@ -194,9 +199,21 @@ def walk_forward_v2(
         stress_name = name + "_double_cost_stress"
         aggregate[stress_name] = _aggregate_folds(folds, stress_name)
 
+    model_artifacts = {}
+    if model_dir is not None:
+        base = safe_symbol_name(symbol)
+        destination = Path(model_dir)
+        destination.mkdir(parents=True, exist_ok=True)
+        for key in ("v2_gaussian_nb", "v2_random_forest"):
+            artifact_path = destination / f"{base}_{key}.json"
+            save_v2_model(final_models[key], artifact_path)
+            model_artifacts[key] = str(artifact_path)
+
     return {
         "status": "RESEARCH_ONLY",
         "trading_authorized": False,
+        "final_model_fit_through_bars": final_model_train_bars,
+        "model_artifacts": model_artifacts,
         "model_version": "APEX V2 candidates compared with V1 logistic baseline",
         "method": "five-fold expanding-window outer walk-forward; candidate models refit before each unseen block",
         "configuration": {
@@ -255,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         epochs=args.epochs,
         trees=args.trees,
+        model_dir=Path(args.report_dir) / "models",
+        symbol=args.symbol,
     )
     report["symbol"] = args.symbol
     report["dataset_file"] = args.csv
