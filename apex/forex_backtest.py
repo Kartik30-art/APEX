@@ -282,13 +282,18 @@ def walk_forward_ml_backtest(
         ]
         predictions = {}
         model_signals = {}
+        ema_trend_signals = {}
         for index in range(train_end, test_end - 1):
-            probabilities = model.probabilities(_features_at(candles, index))
+            features = _features_at(candles, index)
+            probabilities = model.probabilities(features)
             predicted = max(probabilities, key=probabilities.get)
             confidence = probabilities[predicted]
             action = predicted if predicted in (-1, 1) and confidence >= min_confidence else 0
             predictions[index] = predicted
             model_signals[index] = action
+            # Transparent technical reference using the same completed bar:
+            # positive EMA 8/21 gap -> long, negative gap -> short.
+            ema_trend_signals[index] = 1 if features[4] > 0 else -1
 
         training_samples = build_samples(
             history,
@@ -323,6 +328,10 @@ def walk_forward_ml_backtest(
             start_index=train_end, end_index=test_end,
             costs=costs, initial_equity=initial_equity,
         )
+        ema_trend_result = _trade_simulation(
+            candles, ema_trend_signals, start_index=train_end, end_index=test_end,
+            costs=costs, initial_equity=initial_equity,
+        )
         flat_result = _trade_simulation(
             candles, {}, start_index=train_end, end_index=test_end,
             costs=costs, initial_equity=initial_equity,
@@ -351,6 +360,7 @@ def walk_forward_ml_backtest(
                 "ml_model": model_result,
                 "training_majority_class": majority_result,
                 "buy_and_hold_long": buy_hold_result,
+                "ema_8_21_trend": ema_trend_result,
                 "always_flat": flat_result,
                 "ml_model_double_cost_stress": stress_result,
             },
@@ -364,6 +374,7 @@ def walk_forward_ml_backtest(
         "ml_model",
         "training_majority_class",
         "buy_and_hold_long",
+        "ema_8_21_trend",
         "always_flat",
         "ml_model_double_cost_stress",
     )
