@@ -51,7 +51,7 @@ Run:
 python -m apex.backtest_forex_v2 --csv data/forex/EURUSD_X_1h.csv --symbol EURUSD=X
 ```
 
-V2 compares two alternative classifiers with the V1 logistic model using expanding-window retraining, unseen forward blocks and doubled-cost stress tests. Details are in [the V2 guide](docs/FOREX_MODEL_V2.md). All model versions remain research-only.
+V2 compares two alternative classifiers with the V1 logistic model using expanding-window retraining, unseen forward blocks and doubled-cost stress tests. Details are in [the V2 guide](docs/FOREX_MODEL_V2.md). See the [four-pair V2 results and rejection decision](docs/FOREX_MODEL_V2_RESULTS.md). All model versions remain research-only.
 
 ## Web workbench and access protection
 
