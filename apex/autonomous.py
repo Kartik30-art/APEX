@@ -303,6 +303,16 @@ class AutonomousDemoAgent:
                 self._event("agent_error", f"Scan failed: {type(exc).__name__}")
             self._stop.wait(SCAN_SECONDS)
 
+    def add_demo_funds(self, amount: str) -> dict:
+        value = Decimal(str(amount))
+        if not value.is_finite() or value <= 0 or value > Decimal("100000000"):
+            raise ValueError("Demo-fund request must be between 0 and 100,000,000")
+        with self._connect() as db:
+            db.execute("UPDATE agent_account SET balance=CAST(balance AS REAL)+?,updated_at=? WHERE id=1",
+                       (float(value), _now().isoformat()))
+        self._event("demo_funds", f"Added {value} virtual demo funds; no real money was moved.")
+        return self._account()
+
     def snapshot(self):
         with self._lock:
             status = dict(self._status)
