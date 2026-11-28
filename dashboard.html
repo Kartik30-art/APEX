@@ -54,6 +54,19 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;p
   <div class="note">Initial demo balance is configured by the system. Funding requests are recorded in the execution timeline.</div>
  </section>
 </div>
+<div class="layout">
+ <section class="panel">
+  <h2>SHADOW SIGNAL TRACKER · NO ORDERS</h2>
+  <div class="grid">
+   <div class="metric"><small>Recorded signals</small><strong id="shadowTotal">0</strong></div>
+   <div class="metric"><small>Evaluated signals</small><strong id="shadowEvaluated">0</strong></div>
+   <div class="metric"><small>Directional accuracy</small><strong id="shadowAccuracy">—</strong></div>
+   <div class="metric"><small>Correct / incorrect</small><strong id="shadowRecord">0 / 0</strong></div>
+  </div>
+  <div class="note" id="shadowNote">Signals are observed only and evaluated against the next newer completed candle. This is not the trained ML model or broker execution.</div>
+  <div class="scroll"><table><thead><tr><th>Asset</th><th>Signal</th><th>Recorded at</th><th>Outcome</th><th>Directional return</th></tr></thead><tbody id="shadowRows"><tr><td colspan="5" class="empty">Waiting for shadow observations…</td></tr></tbody></table></div>
+ </section>
+</div>
 <p class="footer">Research feed: Yahoo Finance public chart endpoint (unofficial, may be delayed, limited or unavailable; not licensed exchange data). This agent uses deterministic quantitative rules, not a paid LLM. No profitability is implied. All positions are simulated, stored in the demo ledger and never sent to a broker. India exchange-traded currency derivatives are not included in this first autonomous demo engine.</p>
 </main>
 <script>
@@ -79,6 +92,12 @@ function render(s){
  const assets=s.ranked_assets||[];$('assets').innerHTML=assets.length?assets.map((x,i)=>'<tr><td class="rank">#'+(i+1)+'</td><td>'+x.symbol+'</td><td>'+fmt(x.price)+'</td><td><span class="signal '+(x.signal==='sell'?'sell':x.signal==='neutral'?'neutral':'')+'">'+x.signal.toUpperCase()+'</span></td><td>'+fmt(x.rsi,1)+'</td><td>'+x.score+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No valid market data. Agent will retry automatically.</td></tr>';
  const positions=a.open_trades||[];$('positions').innerHTML=positions.length?positions.map(x=>'<tr><td>'+x.symbol+'<br><span class="'+(x.side==='buy'?'mint':'red')+'">'+x.side.toUpperCase()+'</span></td><td>'+fmt(x.entry_price)+'</td><td>'+fmt(x.stop_price)+'</td><td>'+fmt(x.target_price)+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">No open positions</td></tr>';
  const events=s.events||[];$('events').innerHTML=events.length?events.map(x=>'<div class="event"><small>'+new Date(x.time).toLocaleString()+' · '+x.type+'</small><p>'+x.message+'</p></div>').join(''):'<div class="empty">No events recorded yet.</div>';
+ const sh=s.shadow||{}, rows=sh.records||[];
+ $('shadowTotal').textContent=sh.total||0;$('shadowEvaluated').textContent=sh.evaluated||0;
+ $('shadowAccuracy').textContent=sh.directional_accuracy_pct==null?'—':sh.directional_accuracy_pct+'%';
+ $('shadowRecord').textContent=(sh.correct||0)+' / '+(sh.incorrect||0);
+ $('shadowNote').textContent='Directional accuracy excludes neutral and flat outcomes. Next-observed-candle horizon · '+(sh.neutral||0)+' neutral signals · '+(sh.orders_created||0)+' orders created.';
+ $('shadowRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+x.symbol+'</td><td>'+x.signal.toUpperCase()+'</td><td>'+new Date(x.signal_time).toLocaleString()+'</td><td>'+(x.outcome||'PENDING')+'</td><td>'+(x.return_pct==null?'—':Number(x.return_pct).toFixed(4)+'%')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Waiting for shadow observations…</td></tr>';
  const sel=$('symbol');const names=(s.watchlist||[]);if(!sel.options.length){sel.innerHTML=names.map(x=>'<option value="'+x+'">'+x+'</option>').join('');selected=names[0]||'';if(selected)loadChart(selected);}
  if(!selected&&names.length){selected=names[0];loadChart(selected);}
 }
