@@ -112,6 +112,7 @@ def build_v2_samples(
             forward_return=sample.forward_return,
         )
         for sample in base_samples
+        if sample.source_index >= 60
     ]
 
 
