@@ -28,7 +28,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;p
 </div>
 <div class="layout">
  <section class="panel">
-  <div class="toolbar"><h2>LIVE RESEARCH CHART</h2><select class="select" id="symbol"></select></div>
+  <div class="toolbar"><h2>MARKET CHART · 15M</h2><select class="select" id="symbol"></select></div>
   <canvas id="chart" width="1100" height="360"></canvas>
   <div class="chart-meta" id="chartMeta"><span>Waiting for completed market candles…</span></div>
  </section>
@@ -63,10 +63,13 @@ const fmt=(v,n=5)=>Number(v).toFixed(n);
 function drawChart(bars){
  const canvas=$('chart'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
  if(!bars||bars.length<2){ctx.fillStyle='#93a4bb';ctx.font='16px sans-serif';ctx.fillText('Waiting for market data',24,40);return;}
- const values=bars.map(x=>Number(x.close)),min=Math.min(...values),max=Math.max(...values),pad=(max-min)*.12||.0001,lo=min-pad,hi=max+pad;
- ctx.strokeStyle='#223249';ctx.lineWidth=1;for(let i=0;i<5;i++){let y=20+i*(h-45)/4;ctx.beginPath();ctx.moveTo(55,y);ctx.lineTo(w-12,y);ctx.stroke();ctx.fillStyle='#8394aa';ctx.font='11px sans-serif';ctx.fillText((hi-(hi-lo)*i/4).toFixed(5),5,y+4);}
- const step=(w-80)/(values.length-1);ctx.beginPath();values.forEach((v,i)=>{let x=55+i*step,y=20+(hi-v)/(hi-lo)*(h-45);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle='#75e0bd';ctx.lineWidth=2.4;ctx.stroke();
- ctx.fillStyle='#edf3fc';ctx.font='12px sans-serif';ctx.fillText('Close price',60,15);
+ const values=bars.map(x=>Number(x.close)),all=bars.flatMap(x=>[Number(x.high),Number(x.low)]),min=Math.min(...all),max=Math.max(...all),pad=(max-min)*.12||.0001,lo=min-pad,hi=max+pad;
+ const y=v=>20+(hi-v)/(hi-lo)*(h-45),step=(w-80)/(bars.length-1),body=Math.max(2,Math.min(8,step*.62));
+ ctx.strokeStyle='#223249';ctx.lineWidth=1;for(let i=0;i<5;i++){let gy=20+i*(h-45)/4;ctx.beginPath();ctx.moveTo(55,gy);ctx.lineTo(w-12,gy);ctx.stroke();ctx.fillStyle='#8394aa';ctx.font='11px sans-serif';ctx.fillText((hi-(hi-lo)*i/4).toFixed(5),5,gy+4);}
+ bars.forEach((b,i)=>{const x=55+i*step,o=Number(b.open),cl=Number(b.close);ctx.strokeStyle=cl>=o?'#75e0bd':'#ff7d87';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x,y(Number(b.high)));ctx.lineTo(x,y(Number(b.low)));ctx.stroke();ctx.fillRect(x-body/2,Math.min(y(o),y(cl)),body,Math.max(1,Math.abs(y(o)-y(cl))));});
+ function ema(period){let alpha=2/(period+1),v=values[0],out=[v];for(let i=1;i<values.length;i++){v=alpha*values[i]+(1-alpha)*v;out.push(v);}return out;}
+ for(const [period,color] of [[9,'#f2c66d'],[21,'#8ba9ff']]){const series=ema(period);ctx.beginPath();series.forEach((v,i)=>{const x=55+i*step,yy=y(v);i?ctx.lineTo(x,yy):ctx.moveTo(x,yy)});ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.stroke();}
+ ctx.fillStyle='#f2c66d';ctx.font='11px sans-serif';ctx.fillText('EMA 9',65,15);ctx.fillStyle='#8ba9ff';ctx.fillText('EMA 21',120,15);
 }
 async function loadChart(symbol){selected=symbol;try{const r=await fetch('/api/agent/chart?symbol='+encodeURIComponent(symbol));const d=await r.json();if(!r.ok)throw Error(d.error);drawChart(d.bars);const last=d.bars?.at(-1);$('chartMeta').textContent=last?('Last completed candle: '+new Date(last.timestamp).toLocaleString()+' · Close: '+fmt(last.close)+' · '+d.interval):'No completed candles yet';}catch(e){drawChart([]);$('chartMeta').textContent='Chart unavailable: '+e.message;}}
 function render(s){
