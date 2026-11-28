@@ -98,5 +98,7 @@ def test_dashboard_is_read_only_autonomous_monitor(apex_server):
         page = response.read().decode()
     assert "AI market operations" in page
     assert "AI ASSET SCANNER" in page
+    assert "RULE-BASED" in page
+    assert "SHADOW SIGNAL TRACKER" in page
     assert "DEMO POSITIONS" in page
     assert "LIVE ORDERS OFF" in page
