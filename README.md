@@ -9,7 +9,7 @@ APEX is a personal-use, research-first workbench for studying global Forex and I
 - Deterministic moving-average crossover example.
 - Event-driven OHLC backtester with next-bar-open fills and a separate contract-aware INR currency-futures backtester using contract units, JPY quotation convention, tick values, explicit fee inputs and tick slippage.
 - Expanding-window walk-forward validation module.
-- SQLite paper-trade journal requiring both paper mode and explicit user confirmation; unique client IDs prevent duplicate journal entries.
+- SQLite paper-trade journal exposed in the dashboard: create and close simulated records only after explicit confirmation; unique client IDs prevent duplicate entries. It never routes orders to a broker.
 - Append-only JSONL audit logger.
 - Research-only web dashboard with CSV upload for generic and contract-aware historical backtests, licensed-provider controls, AI research comparison, WebSocket status, and a verified database snapshot download.
 - Automated unit tests and GitHub Actions test workflow.
