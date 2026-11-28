@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   train:
-    name: Train \${{ matrix.slug }} research model
+    name: Train ${{ matrix.slug }} research model
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -45,7 +45,7 @@ jobs:
       - name: Download historical data and train model
         run: >-
           python -m apex.train_forex
-          --symbol '\${{ matrix.symbol }}'
+          --symbol '${{ matrix.symbol }}'
           --period 2y
           --interval 1h
           --data-dir data/forex
@@ -54,7 +54,7 @@ jobs:
       - name: Upload dataset, model and holdout report
         uses: actions/upload-artifact@v4
         with:
-          name: apex-\${{ matrix.slug }}-model-\${{ github.run_id }}
+          name: apex-${{ matrix.slug }}-model-${{ github.run_id }}
           path: |
             data/forex/*
             artifacts/forex-models/*
