@@ -80,3 +80,12 @@ def test_risk_config_rejects_invalid_limits():
         RiskConfig(max_daily_loss_fraction=Decimal("1.5"))
     with pytest.raises(ValueError):
         RiskConfig(max_quote_age_seconds=-1)
+
+
+def test_trade_intent_rejects_non_finite_and_naive_timestamp():
+    from apex.models import TradeIntent
+    now = datetime.now(timezone.utc)
+    with pytest.raises(ValueError, match="finite"):
+        TradeIntent("EURUSD", "buy", Decimal("NaN"), Decimal("1.1"), Decimal("1.09"), now, "test")
+    with pytest.raises(ValueError, match="timezone-aware"):
+        TradeIntent("EURUSD", "buy", Decimal("1"), Decimal("1.1"), Decimal("1.09"), datetime(2026, 1, 1), "test")
