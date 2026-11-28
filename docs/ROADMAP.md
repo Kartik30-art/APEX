@@ -23,3 +23,14 @@
 ## Live trading
 
 Out of scope. No live execution code or broker adapter is present. Any future proposal would require a separate explicit user decision, official regulatory and broker eligibility checks, security review, independent risk controls, operational controls, and a validated paper record. AI must never autonomously authorize or place live orders.
+
+
+## Shadow observation (implemented; no execution)
+
+- The autonomous scanner records each completed-candle heuristic signal (buy/sell/neutral) in a separate SQLite shadow ledger.
+- Duplicate polling of the same symbol/candle is idempotent.
+- A pending signal is evaluated against the next newer completed candle observed for that symbol; directional returns are sign-adjusted for buys and sells.
+- The dashboard agent snapshot exposes aggregate counts, directional accuracy, and recent records under `shadow`.
+- This is a one-observation research diagnostic, not the trained V1/V2/V3 model, not a broker quote feed, and not an order simulator. Neutral signals are counted separately and excluded from directional accuracy.
+- Gaps in provider data can make the next observed candle later than one 15-minute interval. Results must be interpreted with timestamps and source limitations.
+- No MT5 connection, broker order, or live execution is added. The existing model authorization remains disabled.
