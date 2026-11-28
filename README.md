@@ -43,6 +43,16 @@ python -m apex.backtest_forex --csv data/forex/EURUSD_X_1h.csv --symbol EURUSD=X
 
 It retrains the model on an expanding history before each unseen test block and compares cost-adjusted results with simple baselines. The default friction assumptions are illustrative rather than broker quotes. See [the Step 2 validation guide](docs/FOREX_MODEL_VALIDATION.md) and [the observed Step 2 results](docs/FOREX_MODEL_VALIDATION_RESULTS.md). Reports are saved under `artifacts/forex-backtests/`.
 
+## Model V2 comparison
+
+Run:
+
+```bash
+python -m apex.backtest_forex_v2 --csv data/forex/EURUSD_X_1h.csv --symbol EURUSD=X
+```
+
+V2 compares two alternative classifiers with the V1 logistic model using expanding-window retraining, unseen forward blocks and doubled-cost stress tests. Details are in [the V2 guide](docs/FOREX_MODEL_V2.md). All model versions remain research-only.
+
 ## Web workbench and access protection
 
 The dashboard is protected by HTTP Basic authentication. Configure a strong, unique \`APEX_ACCESS_PASSWORD\` environment variable in the Render service before accessing it. The username is \`apex\`. If the variable is missing, the app remains locked and returns HTTP 503. Use HTTPS (Render's public URL provides TLS); do not commit the password or send it in chat. The password is not created automatically.
