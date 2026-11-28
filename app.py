@@ -1,5 +1,7 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
+from pathlib import Path
+import threading
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import json
@@ -8,6 +10,20 @@ import base64
 import hmac
 
 STREAM = None
+AGENT = None
+AGENT_LOCK = threading.Lock()
+
+
+def _get_agent():
+    global AGENT
+    with AGENT_LOCK:
+        if AGENT is None:
+            from apex.autonomous import AutonomousDemoAgent
+            from apex.storage import APEXStore
+            AGENT = AutonomousDemoAgent(APEXStore().path)
+        agent = AGENT
+    agent.start()
+    return agent
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -256,7 +272,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         # Public, non-sensitive health probe for hosting infrastructure.
         if path == "/healthz":
-            body = json.dumps({"status":"ok","mode":"research","live_trading_enabled":False}).encode()
+            body = json.dumps({"status":"ok","mode":"demo_paper","live_trading_enabled":False}).encode()
             self._send(200, "application/json", body)
             return
         if not self._authorized():
@@ -294,6 +310,14 @@ class Handler(BaseHTTPRequestHandler):
             ledger=PaperLedger(APEXStore().path)
             body=json.dumps(ledger.summary(),allow_nan=False).encode()
             self._send(200,"application/json",body)
+        elif path == "/api/agent/status":
+            body = json.dumps(_get_agent().snapshot(), allow_nan=False).encode()
+            self._send(200, "application/json", body)
+        elif path == "/api/agent/chart":
+            query = parse_qs(urlsplit(self.path).query)
+            symbol = (query.get("symbol") or [""])[0]
+            body = json.dumps(_get_agent().chart(symbol), allow_nan=False).encode()
+            self._send(200, "application/json", body)
         elif path == "/api/integrations":
             from apex.ai_research import AIResearch
             body = json.dumps({"ai":{"configured":AIResearch().configured()},
@@ -303,7 +327,8 @@ class Handler(BaseHTTPRequestHandler):
                 "database":"sqlite_local_or_mounted","live_trading_enabled":False}).encode()
             self._send(200,"application/json",body)
         else:
-            self._send(200, "text/html; charset=utf-8", PAGE.encode())
+            dashboard = Path(__file__).with_name("dashboard.html")
+            self._send(200, "text/html; charset=utf-8", dashboard.read_bytes())
 
     def do_POST(self):
         if not self._authorized():
@@ -316,7 +341,9 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload,dict):
                 raise ValueError("JSON request body must be an object")
-            if path == "/api/paper/trades":
+            if path == "/api/agent/funds":
+                result = _get_agent().add_demo_funds(str(payload.get("amount", "")))
+            elif path == "/api/paper/trades":
                 from apex.paper import PaperLedger
                 from apex.storage import APEXStore
                 from apex.models import TradeIntent
