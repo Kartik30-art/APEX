@@ -143,9 +143,11 @@ class AutonomousDemoAgent:
                 opened_at TEXT NOT NULL, closed_at TEXT, pnl TEXT NOT NULL DEFAULT '0',
                 reason TEXT NOT NULL
             );
-            INSERT OR IGNORE INTO agent_account(id,starting_balance,balance,updated_at)
-            VALUES(1,?,?,?);
-            """, (str(STARTING_BALANCE), str(STARTING_BALANCE), _now().isoformat()))
+            """)
+            db.execute(
+                "INSERT OR IGNORE INTO agent_account(id,starting_balance,balance,updated_at) VALUES(1,?,?,?)",
+                (str(STARTING_BALANCE), str(STARTING_BALANCE), _now().isoformat()),
+            )
 
     def start(self):
         with self._lock:
