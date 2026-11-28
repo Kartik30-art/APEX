@@ -1,12 +1,15 @@
 import base64
 import json
 import threading
+import sys
+from pathlib import Path
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app
 
 
