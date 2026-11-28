@@ -89,3 +89,14 @@ def test_paper_trade_rejects_missing_confirmation(apex_server):
     }
     status, _ = call(apex_server, "/api/paper/trades", payload=payload)
     assert status == 400
+
+def test_dashboard_is_read_only_autonomous_monitor(apex_server):
+    token = base64.b64encode(b"apex:test-only-password").decode()
+    request = Request(apex_server + "/")
+    request.add_header("Authorization", "Basic " + token)
+    with urlopen(request, timeout=3) as response:
+        page = response.read().decode()
+    assert "AI market operations" in page
+    assert "AI ASSET SCANNER" in page
+    assert "DEMO POSITIONS" in page
+    assert "LIVE ORDERS OFF" in page
