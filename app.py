@@ -350,7 +350,7 @@ class Handler(BaseHTTPRequestHandler):
                 if payload.get("user_confirmed") is not True:
                     raise PermissionError("explicit confirmation is required to close a paper trade")
                 trade_id=int(path.split("/")[-2])
-                ledger=PaperLedger(Path(os.getenv("APEX_DATA_DIR","data"))/"paper_trades.sqlite3")
+                ledger=PaperLedger(APEXStore().path)
                 ledger.close_trade(trade_id,exit_price=Decimal(str(payload.get("exit_price"))),user_confirmed=True)
                 result={"trade_id":trade_id,"status":"closed","mode":"paper"}
             elif path == "/api/backtest":
