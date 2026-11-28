@@ -53,6 +53,10 @@ python -m apex.backtest_forex_v2 --csv data/forex/EURUSD_X_1h.csv --symbol EURUS
 
 V2 compares two alternative classifiers with the V1 logistic model using expanding-window retraining, unseen forward blocks and doubled-cost stress tests. Details are in [the V2 guide](docs/FOREX_MODEL_V2.md). See the [four-pair V2 results and rejection decision](docs/FOREX_MODEL_V2_RESULTS.md). All model versions remain research-only.
 
+## Model V3 calibration experiment
+
+V3 adds multiclass temperature scaling and a conservative directional-confidence gate. Every expanding fold separates historical samples into chronological fit, calibration and threshold-selection segments, with a three-bar purge between segments. A separate 10-year daily dataset is locked to dates before 2024-10-01 so its outer tests do not recycle the recent hourly V2 evaluation period. Thresholds are selected only on the pre-test segment; when validation does not justify a trade, the model stays flat. Run `python -m apex.backtest_forex_v3 --csv data/forex-v3/EURUSD_X_1d.csv --symbol EURUSD=X`. Details are in [the V3 experiment guide](docs/FOREX_MODEL_V3.md). Results are published separately after the four-pair workflow completes. V3 remains research-only and does not authorize MT5 or broker execution.
+
 ## Web workbench and access protection
 
 The dashboard is protected by HTTP Basic authentication. Configure a strong, unique \`APEX_ACCESS_PASSWORD\` environment variable in the Render service before accessing it. The username is \`apex\`. If the variable is missing, the app remains locked and returns HTTP 503. Use HTTPS (Render's public URL provides TLS); do not commit the password or send it in chat. The password is not created automatically.
