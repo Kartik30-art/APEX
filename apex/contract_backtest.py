@@ -79,6 +79,23 @@ def run_contract_backtest(
             spec, contracts=contracts, entry_price=entry,
             exit_price=exit_price, side=side, fees=fees,
         )
+        # Mark open risk at every candle close so drawdown is not measured
+        # only after a trade has already recovered and closed.
+        for bar in candles:
+            stamp = bar.timestamp.isoformat()
+            if trade.entry_time <= stamp <= trade.exit_time:
+                marked_exit = (
+                    max(spec.tick_size, bar.close - slip)
+                    if side == "buy" else bar.close + slip
+                )
+                marked = calculate_futures_valuation(
+                    spec, contracts=contracts, entry_price=entry,
+                    exit_price=marked_exit, side=side, fees=fees,
+                )
+                marked_equity = running + marked.net_pnl_quote
+                peak = max(peak, marked_equity)
+                if peak > 0:
+                    drawdown = max(drawdown, (peak-marked_equity)/peak)
         trades.append(ContractTrade(trade.side, trade.entry_time, trade.exit_time,
                                     entry, exit_price, value, trade.exit_reason))
         gross_total += value.gross_pnl_quote
@@ -105,6 +122,7 @@ def run_contract_backtest(
             "tick_value_per_contract":str(spec.tick_value),
             "slippage_ticks_per_side":str(slippage_ticks_per_side),
             "fees":"user-configured FeeSchedule; verify charge bases and current rates",
+            "drawdown":"marked at each candle close while a position is open; intrabar extremes are not modeled",
             "excluded":"margin, financing, rollover, taxes not entered in FeeSchedule, partial fills, market impact",
         },
     )
