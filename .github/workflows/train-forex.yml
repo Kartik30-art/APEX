@@ -9,6 +9,8 @@ on:
       - "apex/train_forex.py"
       - "apex/forex_backtest.py"
       - "apex/backtest_forex.py"
+      - "apex/forex_models_v2.py"
+      - "apex/backtest_forex_v2.py"
       - ".github/workflows/train-forex.yml"
   workflow_dispatch:
 
@@ -72,6 +74,22 @@ jobs:
           --slippage-bps-per-side 0.2
           --report-dir artifacts/forex-backtests
 
+      - name: Run V2 model comparison on unseen outer folds
+        run: >-
+          python -m apex.backtest_forex_v2
+          --csv data/forex/${{ matrix.csv }}
+          --symbol ${{ matrix.symbol }}
+          --initial-train-bars 3000
+          --test-bars 1800
+          --max-folds 5
+          --min-confidence 0.45
+          --epochs 100
+          --trees 13
+          --spread-bps-per-side 0.8
+          --commission-bps-per-side 0.0
+          --slippage-bps-per-side 0.2
+          --report-dir artifacts/forex-v2-backtests
+
       - name: Upload dataset, model and validation report
         uses: actions/upload-artifact@v4
         with:
@@ -80,5 +98,6 @@ jobs:
             data/forex/*
             artifacts/forex-models/*
             artifacts/forex-backtests/*
+            artifacts/forex-v2-backtests/*
           if-no-files-found: error
           retention-days: 30
