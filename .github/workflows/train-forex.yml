@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   train-and-validate:
-    name: Validate \${{ matrix.slug }}
+    name: Validate ${{ matrix.slug }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -51,7 +51,7 @@ jobs:
       - name: Download historical data and train baseline model
         run: >-
           python -m apex.train_forex
-          --symbol '\${{ matrix.symbol }}'
+          --symbol ${{ matrix.symbol }}
           --period 2y
           --interval 1h
           --data-dir data/forex
@@ -60,8 +60,8 @@ jobs:
       - name: Run expanding walk-forward and cost stress tests
         run: >-
           python -m apex.backtest_forex
-          --csv 'data/forex/\${{ matrix.csv }}'
-          --symbol '\${{ matrix.symbol }}'
+          --csv data/forex/${{ matrix.csv }}
+          --symbol ${{ matrix.symbol }}
           --initial-train-bars 3000
           --test-bars 1800
           --max-folds 5
@@ -75,7 +75,7 @@ jobs:
       - name: Upload dataset, model and validation report
         uses: actions/upload-artifact@v4
         with:
-          name: apex-\${{ matrix.slug }}-validation-\${{ github.run_id }}
+          name: apex-${{ matrix.slug }}-validation-${{ github.run_id }}
           path: |
             data/forex/*
             artifacts/forex-models/*
