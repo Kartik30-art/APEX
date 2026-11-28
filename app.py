@@ -279,7 +279,6 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/backup/download":
             import tempfile
-            from pathlib import Path
             from apex.storage import APEXStore
             with tempfile.TemporaryDirectory(prefix="apex-download-") as tmp:
                 snapshot=Path(tmp)/"apex-backup.sqlite3"
