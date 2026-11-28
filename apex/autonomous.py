@@ -101,7 +101,10 @@ def fetch_yahoo_bars(symbol: str) -> list[dict]:
         raise RuntimeError("Provider returned fewer than 30 completed candles")
     age = (_now() - datetime.fromisoformat(bars[-1]["timestamp"])).total_seconds()
     if age > 3600:
-        raise RuntimeError(f"Latest completed candle is stale ({int(age)} seconds)")
+        age_minutes = int(age // 60)
+        if _now().weekday() in (5, 6):
+            raise RuntimeError(f"Forex market is closed for the weekend; latest completed candle is {age_minutes} minutes old. Trading is paused until fresh market data returns.")
+        raise RuntimeError(f"Latest completed candle is stale ({age_minutes} minutes old); trading is paused until fresh data returns.")
     return bars[-240:]
 
 
@@ -287,7 +290,9 @@ class AutonomousDemoAgent:
                 ranked.append(self._scan_symbol(ticker, label))
             except Exception as exc:
                 errors.append({"symbol": label, "error": f"{type(exc).__name__}: {exc}"})
-                self._event("data_error", f"{label}: {type(exc).__name__}")
+                # Surface a concise provider reason in the authenticated dashboard timeline.
+                detail = str(exc).replace("\\n", " ")[:180]
+                self._event("data_error", f"{label}: {type(exc).__name__} — {detail}")
         ranked.sort(key=lambda x: x["score"], reverse=True)
         self._maybe_open(ranked)
         with self._lock:
